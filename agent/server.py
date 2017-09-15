@@ -81,9 +81,11 @@ class Root(object):
             model = make_network()
             agent = Agent(model, 3, name='global')
             self.agents = []
-            for i in range(1):
+            for i in range(2):
                 self.agents.append(Agent(model, 3, name='worker{}'.format(i)))
             initialize()
+
+            # load feature extractor (alex net)
             if os.path.exists(CNN_FEATURE_EXTRACTOR):
                 app_logger.info("loading... {}".format(CNN_FEATURE_EXTRACTOR))
                 self.feature_extractor = pickle.load(open(CNN_FEATURE_EXTRACTOR))
