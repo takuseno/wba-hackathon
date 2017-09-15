@@ -80,8 +80,10 @@ class Root(object):
         with sess.as_default():
             model = make_network()
             agent = Agent(model, 3, name='global')
+
             self.agents = []
-            for i in range(2):
+            self.popped_agents = {}
+            for i in range(1):
                 self.agents.append(Agent(model, 3, name='worker{}'.format(i)))
             initialize()
 
@@ -100,13 +102,21 @@ class Root(object):
 
     @cherrypy.expose()
     def flush(self, identifier):
-        agent = self.agents.pop(0)
+        if identifier not in popped_agents:
+            agent = self.agents.pop(0)
+            self.popped_agents[identifier] = agent
+        else:
+            agent = self.popped_agents[identifier]
         with self.sess.as_default():
             self.agent_service.initialize(identifier, agent)
 
     @cherrypy.expose
     def create(self, identifier):
-        agent = self.agents.pop(0)
+        if identifier not in popped_agents:
+            agent = self.agents.pop(0)
+            self.popped_agents[identifier] = agent
+        else:
+            agent = self.popped_agents[identifier]
         with self.sess.as_default():
             body = cherrypy.request.body.read()
             reward, observation, rotation, movement = unpack(body)
