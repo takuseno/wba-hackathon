@@ -23,6 +23,7 @@ import sys
 import brica1
 
 import logging
+import traceback
 from config.log import APP_KEY
 
 app_logger = logging.getLogger(APP_KEY)
@@ -333,7 +334,9 @@ class NetworkBuilder:
                         mod = __import__(mod_name, globals(), locals(), [class_name], -1)
                         Klass = getattr(mod, class_name)
                         component_instance = Klass()
-                    except:
+                    except Exception as e:
+                        print(e)
+                        print(traceback.format_exc())
                         app_logger.error("Module {} at the bottom not grounded as a Component!".format(module_name))
                         return False
                 try:

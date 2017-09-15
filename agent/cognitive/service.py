@@ -12,8 +12,9 @@ app_logger = logging.getLogger(APP_KEY)
 
 
 class AgentService:
-    def __init__(self, config_file, feature_extractor):
+    def __init__(self, config_file, feature_extractor, sess):
         self.feature_extractor = feature_extractor
+        self.sess = sess
         self.nb = interpreter.NetworkBuilder()
         f = open(config_file)
         self.nb.load_file(f)

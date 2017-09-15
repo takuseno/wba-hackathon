@@ -23,6 +23,10 @@ from config.log import CHERRYPY_ACCESS_LOG, CHERRYPY_ERROR_LOG, LOGGING, APP_KEY
 from cognitive.service import AgentService
 from tool.result_logger import ResultLogger
 
+import tensorflow as tf
+from ml.agent import Agent
+from ml.network import make_network
+
 logging.config.dictConfig(LOGGING)
 
 inbound_logger = logging.getLogger(INBOUND_KEY)
@@ -69,67 +73,79 @@ feature_output_dim = (depth_image_dim * depth_image_count) + (image_feature_dim 
 
 
 class Root(object):
-    def __init__(self, **kwargs):
-        if os.path.exists(CNN_FEATURE_EXTRACTOR):
-            app_logger.info("loading... {}".format(CNN_FEATURE_EXTRACTOR))
-            self.feature_extractor = pickle.load(open(CNN_FEATURE_EXTRACTOR))
-            app_logger.info("done")
-        else:
-            self.feature_extractor = CnnFeatureExtractor(use_gpu, CAFFE_MODEL, MODEL_TYPE, image_feature_dim)
-            pickle.dump(self.feature_extractor, open(CNN_FEATURE_EXTRACTOR, 'w'))
-            app_logger.info("pickle.dump finished")
+    def __init__(self, sess):
+        self.sess = sess
+        with sess.as_default():
+            if os.path.exists(CNN_FEATURE_EXTRACTOR):
+                app_logger.info("loading... {}".format(CNN_FEATURE_EXTRACTOR))
+                self.feature_extractor = pickle.load(open(CNN_FEATURE_EXTRACTOR))
+                app_logger.info("done")
+            else:
+                self.feature_extractor = CnnFeatureExtractor(use_gpu, CAFFE_MODEL, MODEL_TYPE, image_feature_dim)
+                pickle.dump(self.feature_extractor, open(CNN_FEATURE_EXTRACTOR, 'w'))
+                app_logger.info("pickle.dump finished")
 
-        self.agent_service = AgentService(BRICA_CONFIG_FILE, self.feature_extractor)
-        self.result_logger = ResultLogger()
+            self.agent_service = AgentService(BRICA_CONFIG_FILE, self.feature_extractor, sess)
+            self.result_logger = ResultLogger()
 
     @cherrypy.expose()
     def flush(self, identifier):
-        self.agent_service.initialize(identifier)
+        with self.sess.as_default():
+            self.agent_service.initialize(identifier)
 
     @cherrypy.expose
     def create(self, identifier):
-        body = cherrypy.request.body.read()
-        reward, observation, rotation, movement = unpack(body)
+        with self.sess.as_default():
+            body = cherrypy.request.body.read()
+            reward, observation, rotation, movement = unpack(body)
 
-        inbound_logger.info('reward: {}, depth: {}'.format(reward, observation['depth']))
-        feature = self.feature_extractor.feature(observation)
-        self.result_logger.initialize()
-        result = self.agent_service.create(reward, feature, identifier)
+            inbound_logger.info('reward: {}, depth: {}'.format(reward, observation['depth']))
+            feature = self.feature_extractor.feature(observation)
+            self.result_logger.initialize()
+            result = self.agent_service.create(reward, feature, identifier)
 
-        outbound_logger.info('action: {}'.format(result))
+            outbound_logger.info('action: {}'.format(result))
 
         return str(result)
 
     @cherrypy.expose
     def step(self, identifier):
-        body = cherrypy.request.body.read()
-        reward, observation, rotation, movement = unpack(body)
+        with self.sess.as_default():
+            body = cherrypy.request.body.read()
+            reward, observation, rotation, movement = unpack(body)
 
-        inbound_logger.info('reward: {}, depth: {}'.format(reward, observation['depth']))
+            inbound_logger.info('reward: {}, depth: {}'.format(reward, observation['depth']))
 
-        result = self.agent_service.step(reward, observation, identifier)
-        self.result_logger.step()
-        outbound_logger.info('result: {}'.format(result))
+            result = self.agent_service.step(reward, observation, identifier)
+            self.result_logger.step()
+            outbound_logger.info('result: {}'.format(result))
         return str(result)
 
     @cherrypy.expose
     def reset(self, identifier):
-        body = cherrypy.request.body.read()
-        reward, success, failure, elapsed, finished = unpack_reset(body)
+        with self.sess.as_default():
+            body = cherrypy.request.body.read()
+            reward, success, failure, elapsed, finished = unpack_reset(body)
 
-        inbound_logger.info('reward: {}, success: {}, failure: {}, elapsed: {}'.format(
-            reward, success, failure, elapsed))
+            inbound_logger.info('reward: {}, success: {}, failure: {}, elapsed: {}'.format(
+                reward, success, failure, elapsed))
 
-        result = self.agent_service.reset(reward, identifier)
-        self.result_logger.report(success, failure, finished)
+            result = self.agent_service.reset(reward, identifier)
+            self.result_logger.report(success, failure, finished)
 
-        outbound_logger.info('result: {}'.format(result))
+            outbound_logger.info('result: {}'.format(result))
         return str(result)
 
 def main(args):
+    sess = tf.Session()
+
+    with sess.as_default():
+        model = make_network()
+        agent = Agent(model, 3, name='global')
+
     cherrypy.config.update({'server.socket_host': args.host, 'server.socket_port': args.port, 'log.screen': False,
                             'log.access_file': CHERRYPY_ACCESS_LOG, 'log.error_file': CHERRYPY_ERROR_LOG})
-    cherrypy.quickstart(Root())
+    cherrypy.quickstart(Root(sess))
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='LIS Backend')
