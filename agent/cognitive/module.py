@@ -79,7 +79,7 @@ class BGComponent(brica1.Component):
         features = self.get_in_port('Isocortex#VVC-BG-Input').buffer
 
         action = self.agent.act_and_train(features, reward)
-        app_logger.info('action {}'.format(action))
+        app_logger.info('action {}, reward {}'.format(action, reward))
 
         self.results['BG-Isocortex#FL-Output'] = np.array([action])
 

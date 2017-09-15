@@ -83,7 +83,7 @@ class Root(object):
 
             self.agents = []
             self.popped_agents = {}
-            for i in range(1):
+            for i in range(2):
                 self.agents.append(Agent(model, 3, name='worker{}'.format(i)))
             initialize()
 
@@ -121,12 +121,14 @@ class Root(object):
             body = cherrypy.request.body.read()
             reward, observation, rotation, movement = unpack(body)
 
-            inbound_logger.info('reward: {}, depth: {}'.format(reward, observation['depth']))
+            inbound_logger.info('id: {}, reward: {}, depth: {}'.format(
+                identifier, reward, observation['depth']
+            ))
             feature = self.feature_extractor.feature(observation)
             self.result_logger.initialize()
             result = self.agent_service.create(reward, feature, identifier, agent)
 
-            outbound_logger.info('action: {}'.format(result))
+            outbound_logger.info('id:{}, action: {}'.format(identifier, result))
 
         return str(result)
 
@@ -136,11 +138,15 @@ class Root(object):
             body = cherrypy.request.body.read()
             reward, observation, rotation, movement = unpack(body)
 
-            inbound_logger.info('reward: {}, depth: {}'.format(reward, observation['depth']))
+            inbound_logger.info('id: {}, reward: {}, depth: {}'.format(
+                identifier, reward, observation['depth']
+            ))
 
             result = self.agent_service.step(reward, observation, identifier)
             self.result_logger.step()
-            outbound_logger.info('result: {}'.format(result))
+            outbound_logger.info('id: {}, result: {}'.format(
+                identifier, result
+            ))
         return str(result)
 
     @cherrypy.expose

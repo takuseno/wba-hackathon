@@ -24,11 +24,11 @@ def _make_network(inpt, rnn_state_tuple, num_actions, scope, reuse=None):
                     sequence_length=step_size, time_major=False)
             rnn_out = tf.reshape(lstm_outputs, [-1, 256])
 
-        policy = layers.fully_connected(rnn_out,
+        policy = layers.fully_connected(conv_out,
                 num_actions, activation_fn=tf.nn.softmax,
                 weights_initializer=normalized_columns_initializer(), biases_initializer=None)
 
-        value = layers.fully_connected(rnn_out, 1, activation_fn=None,
+        value = layers.fully_connected(conv_out, 1, activation_fn=None,
                 weights_initializer=normalized_columns_initializer(), biases_initializer=None)
 
     return policy, value, lstm_state
