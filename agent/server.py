@@ -99,7 +99,7 @@ class Root(object):
 
     @cherrypy.expose()
     def flush(self, identifier):
-        if identifier not in popped_agents:
+        if identifier not in self.popped_agents:
             agent = self.agents.pop(0)
             self.popped_agents[identifier] = agent
         else:
@@ -109,7 +109,7 @@ class Root(object):
 
     @cherrypy.expose
     def create(self, identifier):
-        if identifier not in popped_agents:
+        if identifier not in self.popped_agents:
             agent = self.agents.pop(0)
             self.popped_agents[identifier] = agent
         else:
