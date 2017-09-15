@@ -66,7 +66,7 @@ class Agent:
         action = np.random.choice(range(self.num_actions), p=prob[0])
         value = self._state_value([obs], self.rnn_state0, self.rnn_state1)[0][0]
 
-        if len(self.states) == 5:
+        if len(self.states) == 20:
             self.train(self.last_value)
             self.states = []
             self.rewards = []

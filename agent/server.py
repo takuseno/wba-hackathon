@@ -26,6 +26,7 @@ from tool.result_logger import ResultLogger
 import tensorflow as tf
 from ml.agent import Agent
 from ml.network import make_network
+from lightsaber.tensorflow.util import initialize
 
 logging.config.dictConfig(LOGGING)
 
@@ -33,6 +34,7 @@ inbound_logger = logging.getLogger(INBOUND_KEY)
 app_logger = logging.getLogger(APP_KEY)
 outbound_logger = logging.getLogger(OUTBOUND_KEY)
 
+sess = tf.Session()
 
 def unpack(payload, depth_image_count=1, depth_image_dim=32*32):
     dat = msgpack.unpackb(payload)
@@ -73,9 +75,15 @@ feature_output_dim = (depth_image_dim * depth_image_count) + (image_feature_dim 
 
 
 class Root(object):
-    def __init__(self, sess):
+    def __init__(self):
         self.sess = sess
         with sess.as_default():
+            model = make_network()
+            agent = Agent(model, 3, name='global')
+            self.agents = []
+            for i in range(1):
+                self.agents.append(Agent(model, 3, name='worker{}'.format(i)))
+            initialize()
             if os.path.exists(CNN_FEATURE_EXTRACTOR):
                 app_logger.info("loading... {}".format(CNN_FEATURE_EXTRACTOR))
                 self.feature_extractor = pickle.load(open(CNN_FEATURE_EXTRACTOR))
@@ -90,11 +98,13 @@ class Root(object):
 
     @cherrypy.expose()
     def flush(self, identifier):
+        agent = self.agents.pop(0)
         with self.sess.as_default():
-            self.agent_service.initialize(identifier)
+            self.agent_service.initialize(identifier, agent)
 
     @cherrypy.expose
     def create(self, identifier):
+        agent = self.agents.pop(0)
         with self.sess.as_default():
             body = cherrypy.request.body.read()
             reward, observation, rotation, movement = unpack(body)
@@ -102,7 +112,7 @@ class Root(object):
             inbound_logger.info('reward: {}, depth: {}'.format(reward, observation['depth']))
             feature = self.feature_extractor.feature(observation)
             self.result_logger.initialize()
-            result = self.agent_service.create(reward, feature, identifier)
+            result = self.agent_service.create(reward, feature, identifier, agent)
 
             outbound_logger.info('action: {}'.format(result))
 
@@ -137,15 +147,9 @@ class Root(object):
         return str(result)
 
 def main(args):
-    sess = tf.Session()
-
-    with sess.as_default():
-        model = make_network()
-        agent = Agent(model, 3, name='global')
-
     cherrypy.config.update({'server.socket_host': args.host, 'server.socket_port': args.port, 'log.screen': False,
                             'log.access_file': CHERRYPY_ACCESS_LOG, 'log.error_file': CHERRYPY_ERROR_LOG})
-    cherrypy.quickstart(Root(sess))
+    cherrypy.quickstart(Root())
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='LIS Backend')

@@ -61,16 +61,11 @@ class VVCComponent(brica1.Component):
 
 
 class BGComponent(brica1.Component):
-    def __init__(self, n_input=10240, n_output=1, name='global'):
+    def __init__(self, n_input=10240, n_output=1, agent=None):
         super(BGComponent, self).__init__()
         self.use_gpu = use_gpu
         actions = [0, 1, 2]
         self.input_dim = n_input
-
-        model = make_network()
-        print(get_session())
-        self.agent = Agent(model, len(actions), name='worker1')
-        initialize()
 
     def start(self):
         return 0
@@ -80,7 +75,7 @@ class BGComponent(brica1.Component):
         self.agent.stop_episode_and_train(features, reward)
 
     def fire(self):
-        reward = self.get_in_port('RB-BG-Input').buffer
+        reward = self.get_in_port('RB-BG-Input').buffer[0]
         features = self.get_in_port('Isocortex#VVC-BG-Input').buffer
 
         action = self.agent.act_and_train(features, reward)
