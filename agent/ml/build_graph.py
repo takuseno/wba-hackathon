@@ -3,7 +3,7 @@ import tensorflow as tf
 import lightsaber.tensorflow.util as util
 
 
-def build_train(model, num_actions, optimizer, scope='a3c', reuse=None):
+def build_train(model, dnds, num_actions, optimizer, scope='a3c', reuse=None):
     with tf.variable_scope(scope, reuse=reuse):
         obs_input = tf.placeholder(tf.float32, [None, 10240], name='obs')
         rnn_state_ph0 = tf.placeholder(tf.float32, [1, 256])
@@ -14,7 +14,17 @@ def build_train(model, num_actions, optimizer, scope='a3c', reuse=None):
         advantages_ph = tf.placeholder(tf.float32, [None], name='advantage')
         rnn_state_tuple = tf.contrib.rnn.LSTMStateTuple(rnn_state_ph0, rnn_state_ph1)
 
-        policy, value, state_out = model(obs_input, rnn_state_tuple, num_actions, scope='model')
+        encode, value, state_out = model(obs_input, rnn_state_tuple, num_actions, scope='model')
+
+        probs = []
+        for i, dnd in enumerate(dnds):
+            keys, values = tf.py_func(dnd.lookup, [encode], [tf.float32, tf.float32])
+            square_diff = tf.square(keys - tf.expand_dims(encode, 1))
+            distances = tf.reduce_sum(square_diff, axis=2) + 1e-3
+            weights = 1 / distances
+            normalized_weights = weights / tf.reduce_sum(weights, axis=1, keep_dims=True)
+            probs.append(tf.reduce_sum(normalized_weights * values, axis=1))
+        policy = tf.nn.softmax(tf.transpose(probs))
 
         actions_one_hot = tf.one_hot(actions_ph, num_actions, dtype=tf.float32)
         responsible_outputs = tf.reduce_sum(policy * actions_one_hot, [1])
@@ -52,6 +62,6 @@ def build_train(model, num_actions, optimizer, scope='a3c', reuse=None):
 
         state_value = util.function([obs_input, rnn_state_ph0, rnn_state_ph1], value)
 
-        act = util.function(inputs=[obs_input, rnn_state_ph0, rnn_state_ph1], outputs=[policy, state_out])
+        act = util.function(inputs=[obs_input, rnn_state_ph0, rnn_state_ph1], outputs=[policy, state_out, encode])
 
     return act, train, update_local, action_dist, state_value

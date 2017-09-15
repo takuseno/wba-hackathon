@@ -26,6 +26,7 @@ from tool.result_logger import ResultLogger
 import tensorflow as tf
 from ml.agent import Agent
 from ml.network import make_network
+from ml.dnd import DND
 from lightsaber.tensorflow.util import initialize
 
 logging.config.dictConfig(LOGGING)
@@ -79,12 +80,15 @@ class Root(object):
         self.sess = sess
         with sess.as_default():
             model = make_network()
-            agent = Agent(model, 3, name='global')
+            dnds = []
+            for i in range(3):
+                dnds.append(DND())
+            agent = Agent(model, dnds, 3, name='global')
 
             self.agents = []
             self.popped_agents = {}
             for i in range(2):
-                self.agents.append(Agent(model, 3, name='worker{}'.format(i)))
+                self.agents.append(Agent(model, dnds, 3, name='worker{}'.format(i)))
             initialize()
 
             # load feature extractor (alex net)

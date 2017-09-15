@@ -4,14 +4,16 @@ import tensorflow as tf
 
 
 class Agent:
-    def __init__(self, model, num_actions, name='global', lr=2.5e-4, gamma=0.99):
+    def __init__(self, model, dnds, num_actions, name='global', lr=2.5e-4, gamma=0.99):
         self.num_actions = num_actions
         self.gamma = gamma
         self.t = 0
         self.name = name
+        self.dnds = dnds
 
         act, train, update_local, action_dist, state_value = build_graph.build_train(
             model=model,
+            dnds=dnds,
             num_actions=num_actions,
             optimizer=tf.train.RMSPropOptimizer(learning_rate=7e-4, decay=.99, epsilon=0.1),
             scope=name
@@ -35,6 +37,10 @@ class Agent:
         self.rewards = []
         self.actions = []
         self.values = []
+        self.encodes = []
+
+    def append_experience(self, action, encode, advantage):
+        self.dnds[action].write(encode, advantage)
 
     def train(self, bootstrap_value):
         actions = np.array(self.actions, dtype=np.uint8)
@@ -47,6 +53,9 @@ class Agent:
         values = np.array(self.values, dtype=np.float32)
 
         advantages = returns - values
+
+        for i in range(len(advantages)):
+            self.append_experience(actions[i], self.encodes[i], advantages[i])
 
         summary, loss = self._train(self.states, self.initial_state,
                 self.initial_state, actions, returns, advantages)
@@ -63,22 +72,24 @@ class Agent:
         return action
 
     def act_and_train(self, obs, reward):
-        prob, rnn_state = self._act([obs], self.rnn_state0, self.rnn_state1)
+        prob, rnn_state, encode = self._act([obs], self.rnn_state0, self.rnn_state1)
         action = np.random.choice(range(self.num_actions), p=prob[0])
         value = self._state_value([obs], self.rnn_state0, self.rnn_state1)[0][0]
 
-        if len(self.states) == 20:
+        if len(self.states) == 50:
             self.train(self.last_value)
             self.states = []
             self.rewards = []
             self.actions = []
             self.values = []
+            self.encodes = []
 
         if self.last_obs is not None:
             self.states.append(self.last_obs)
             self.rewards.append(reward)
             self.actions.append(self.last_action)
             self.values.append(self.last_value)
+            self.encodes.append(self.last_encode)
 
         self.t += 1
         self.rnn_state0, self.rnn_state1 = rnn_state
@@ -86,6 +97,7 @@ class Agent:
         self.last_reward = reward
         self.last_action = action
         self.last_value = value
+        self.last_encode = encode[0]
         return action
 
     def stop_episode_and_train(self, obs, reward, done=False):
@@ -93,6 +105,7 @@ class Agent:
             self.states.append(self.last_obs)
             self.rewards.append(reward)
             self.actions.append(self.last_action)
+            self.encodes.append(self.last_encode)
             self.values.append(self.last_value)
             self.train(0)
             self.stop_episode()
@@ -108,3 +121,4 @@ class Agent:
         self.actions = []
         self.rewards = []
         self.values = []
+        self.encodes = []
