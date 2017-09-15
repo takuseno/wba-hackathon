@@ -51,6 +51,7 @@ class Agent:
         summary, loss = self._train(self.states, self.initial_state,
                 self.initial_state, actions, returns, advantages)
         self._update_local()
+        print(loss)
         return loss
 
     def act(self, obs):
@@ -88,12 +89,13 @@ class Agent:
         return action
 
     def stop_episode_and_train(self, obs, reward, done=False):
-        self.states.append(self.last_obs)
-        self.rewards.append(reward)
-        self.actions.append(self.last_action)
-        self.values.append(self.last_value)
-        self.train(0)
-        self.stop_episode()
+        if len(self.states) > 0:
+            self.states.append(self.last_obs)
+            self.rewards.append(reward)
+            self.actions.append(self.last_action)
+            self.values.append(self.last_value)
+            self.train(0)
+            self.stop_episode()
 
     def stop_episode(self):
         self.rnn_state0 = self.initial_state

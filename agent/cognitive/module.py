@@ -9,7 +9,6 @@ import six.moves.cPickle as pickle
 
 from ml.cnn_feature_extractor import CnnFeatureExtractor
 from ml.q_net import QNet
-from ml.experience import Experience
 from ml.network import make_network
 from ml.agent import Agent
 from lightsaber.tensorflow.util import initialize, get_session

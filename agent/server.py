@@ -83,7 +83,7 @@ class Root(object):
 
             self.agents = []
             self.popped_agents = {}
-            for i in range(1):
+            for i in range(3):
                 self.agents.append(Agent(model, 3, name='worker{}'.format(i)))
             initialize()
 
