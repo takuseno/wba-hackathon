@@ -63,7 +63,6 @@ class FeatureExtractor():
 
         # make prediction
         feature = self.predict(x_data).reshape(self.out_dim)
-        print('feature.shape:{}'.format(feature.shape))
         return feature * 255.0
 
     def feature(self, observation, image_feature_count=1):
