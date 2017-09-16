@@ -6,7 +6,6 @@ import sys
 import time
 
 import numpy as np
-import pylab as pl
 
 class PositionTrack():
     def __init__(self):
