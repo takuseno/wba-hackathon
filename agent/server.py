@@ -168,7 +168,7 @@ class Root(object):
         return str(result)
 
 def main(args):
-    config = tf.ConfigProto(gpu_options=tf.GPUOptions(visible_device_list=args.gpu))
+    config = tf.ConfigProto(gpu_options=tf.GPUOptions(visible_device_list=args.gpu, allow_growth=True))
     sess = tf.Session(config=config)
     cherrypy.config.update({'server.socket_host': args.host, 'server.socket_port': args.port, 'log.screen': False,
                             'log.access_file': CHERRYPY_ACCESS_LOG, 'log.error_file': CHERRYPY_ERROR_LOG})
