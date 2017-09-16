@@ -3,6 +3,7 @@ import argparse
 import cPickle as pickle
 import io
 import os
+from threading import Lock
 
 import brica1
 import cherrypy
@@ -76,6 +77,7 @@ feature_output_dim = (depth_image_dim * depth_image_count) + (image_feature_dim 
 
 class Root(object):
     def __init__(self, sess):
+        self.lock = Lock()
         self.sess = sess
         with sess.as_default():
             model = make_network()
@@ -110,6 +112,7 @@ class Root(object):
 
     @cherrypy.expose()
     def flush(self, identifier):
+        self.lock.acquire()
         if identifier not in self.popped_agents:
             agent = self.agents.pop(0)
             self.popped_agents[identifier] = agent
@@ -117,9 +120,11 @@ class Root(object):
             agent = self.popped_agents[identifier]
         with self.sess.as_default():
             self.agent_service.initialize(identifier, agent)
+        self.lock.release()
 
     @cherrypy.expose
     def create(self, identifier):
+        self.lock.acquire()
         if identifier not in self.popped_agents:
             agent = self.agents.pop(0)
             self.popped_agents[identifier] = agent
@@ -137,11 +142,12 @@ class Root(object):
             result = self.agent_service.create(reward, feature, identifier, agent)
 
             outbound_logger.info('id:{}, action: {}'.format(identifier, result))
-
+        self.lock.release()
         return str(result)
 
     @cherrypy.expose
     def step(self, identifier):
+        self.lock.acquire()
         with self.sess.as_default():
             body = cherrypy.request.body.read()
             reward, observation, rotation, movement = unpack(body)
@@ -155,10 +161,12 @@ class Root(object):
             outbound_logger.info('id: {}, result: {}'.format(
                 identifier, result
             ))
+        self.lock.release()
         return str(result)
 
     @cherrypy.expose
     def reset(self, identifier):
+        self.lock.acquire()
         with self.sess.as_default():
             body = cherrypy.request.body.read()
             reward, success, failure, elapsed, finished = unpack_reset(body)
@@ -170,6 +178,7 @@ class Root(object):
             self.result_logger.report(success, failure, finished)
 
             outbound_logger.info('result: {}'.format(result))
+        self.lock.release()
         return str(result)
 
 def main(args):
