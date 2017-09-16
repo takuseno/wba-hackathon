@@ -15,9 +15,9 @@ def build_train(model, dnds, num_actions, optimizer, scope='a3c', reuse=None):
         target_values_ph = tf.placeholder(tf.float32, [None], name='value')
         advantages_ph = tf.placeholder(tf.float32, [None], name='advantage')
         rnn_state_tuple = tf.contrib.rnn.LSTMStateTuple(rnn_state_ph0, rnn_state_ph1)
-        place_ph = tf.placeholder(tf.float32, [None], name='place')
+        place_ph = tf.placeholder(tf.float32, [None, 3], name='place')
         head_ph = tf.placeholder(tf.float32, [None], name='head')
-        grid_ph = tf.placeholder(tf.float32, [None], name='grid')
+        grid_ph = tf.placeholder(tf.float32, [None, 3], name='grid')
 
         encode, value, state_out, place_cell, head_cell, grid_cell, ca1 = model(
                 obs_input, rotate_input, movement_input, rnn_state_tuple, num_actions, scope='model')
@@ -46,8 +46,13 @@ def build_train(model, dnds, num_actions, optimizer, scope='a3c', reuse=None):
                     tf.multiply(log_policy, actions_one_hot)) * advantages_ph + entropy * 0.01, name='policy_loss')
 
             place_loss = tf.nn.l2_loss(place_ph - place_cell, name='place_loss')
+            place_loss_summary = tf.summary.scalar('{}_place_loss'.format(scope), place_loss)
+
             head_loss = tf.nn.l2_loss(head_ph - head_cell, name='head_loss')
+            head_loss_summary = tf.summary.scalar('{}_head_loss'.format(scope), head_loss)
+
             grid_loss = tf.nn.l2_loss(grid_ph - grid_cell, name='grid_loss')
+            grid_loss_summary = tf.summary.scalar('{}_grid_loss'.format(scope), grid_loss)
 
             loss = 0.5 * value_loss + policy_loss + 0.1 * place_loss + 0.1 * head_loss + 0.1 * grid_loss
             loss_summary = tf.summary.scalar('{}_loss'.format(scope), loss)
@@ -69,7 +74,7 @@ def build_train(model, dnds, num_actions, optimizer, scope='a3c', reuse=None):
                 obs_input, rnn_state_ph0, rnn_state_ph1, rotate_input, movement_input,
                         actions_ph, target_values_ph, advantages_ph, place_ph, head_ph, grid_ph
             ],
-            outputs=[loss_summary, loss],
+            outputs=[loss_summary, place_loss_summary, head_loss_summary, grid_loss_summary, loss, place_loss, head_loss, grid_loss],
             updates=[optimize_expr]
         )
 

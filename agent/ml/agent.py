@@ -45,6 +45,9 @@ class Agent:
         self.position_changes = []
         self.pos_track = PositionTrack()
 
+    def set_summary_writer(self, summary_writer):
+        self.summary_writer = summary_writer
+
     def append_experience(self, action, encode, advantage):
         self.dnds[action].write(encode, advantage)
 
@@ -63,8 +66,13 @@ class Agent:
         for i in range(len(advantages)):
             self.append_experience(actions[i], self.encodes[i], advantages[i])
 
-        summary, loss = self._train(self.states, self.initial_state, self.initial_state, self.rotations,
-                self.movements, actions, returns, advantages, self.positions, self.directions, self.position_changes)
+        summary, place_loss_summary, head_loss_summary, grid_loss_summary, loss, place_loss, head_loss, grid_loss = self._train(
+                self.states, self.initial_state, self.initial_state, self.rotations, self.movements,
+                actions, returns, advantages, self.positions, self.directions, self.position_changes)
+        self.summary_writer.add_summary(summary, loss)
+        self.summary_writer.add_summary(place_loss_summary, place_loss)
+        self.summary_writer.add_summary(head_loss_summary, head_loss)
+        self.summary_writer.add_summary(grid_loss_summary, grid_loss)
         self._update_local()
         return loss
 

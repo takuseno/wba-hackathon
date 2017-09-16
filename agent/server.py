@@ -81,13 +81,15 @@ class Root(object):
             dnds = []
             for i in range(3):
                 dnds.append(DND())
-            agent = Agent(model, dnds, 3, name='global')
+            global_agent = Agent(model, dnds, 3, name='global')
 
             self.agents = []
             self.popped_agents = {}
             for i in range(2):
                 self.agents.append(Agent(model, dnds, 3, name='worker{}'.format(i)))
             summary_writer = tf.summary.FileWriter('board', sess.graph)
+            for agent in self.agents:
+                agent.set_summary_writer(summary_writer)
             initialize()
 
             # load feature extractor (alex net)
@@ -145,7 +147,7 @@ class Root(object):
                 identifier, reward, observation['depth']
             ))
 
-            result = self.agent_service.step(reward, observation, identifier)
+            result = self.agent_service.step(reward, rotation, movement, observation, identifier)
             self.result_logger.step()
             outbound_logger.info('id: {}, result: {}'.format(
                 identifier, result
