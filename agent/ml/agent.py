@@ -38,6 +38,11 @@ class Agent:
         self.actions = []
         self.values = []
         self.encodes = []
+        self.rotations = []
+        self.movements = []
+        self.positions = []
+        self.directions = []
+        self.position_changes = []
 
     def append_experience(self, action, encode, advantage):
         self.dnds[action].write(encode, advantage)
@@ -57,10 +62,9 @@ class Agent:
         for i in range(len(advantages)):
             self.append_experience(actions[i], self.encodes[i], advantages[i])
 
-        summary, loss = self._train(self.states, self.initial_state,
-                self.initial_state, actions, returns, advantages)
+        summary, loss = self._train(self.states, self.initial_state, self.initial_state, self.rotations,
+                self.movements, actions, returns, advantages, self.positions, self.directions, self.position_changes)
         self._update_local()
-        print(loss)
         return loss
 
     def act(self, obs):
@@ -72,7 +76,7 @@ class Agent:
         return action
 
     def act_and_train(self, obs, reward):
-        prob, rnn_state, encode = self._act([obs], self.rnn_state0, self.rnn_state1)
+        prob, rnn_state, encode = self._act([obs], self.rnn_state0, self.rnn_state1, [0], [0])
         action = np.random.choice(range(self.num_actions), p=prob[0])
         value = self._state_value([obs], self.rnn_state0, self.rnn_state1)[0][0]
 
@@ -83,6 +87,11 @@ class Agent:
             self.actions = []
             self.values = []
             self.encodes = []
+            self.rotations = []
+            self.movements = []
+            self.positions = []
+            self.directions = []
+            self.position_changes = []
 
         if self.last_obs is not None:
             self.states.append(self.last_obs)
@@ -90,6 +99,11 @@ class Agent:
             self.actions.append(self.last_action)
             self.values.append(self.last_value)
             self.encodes.append(self.last_encode)
+            self.rotations.append(self.last_rotation)
+            self.movements.append(self.last_movement)
+            self.positions.append(self.last_position)
+            self.directions.append(self.last_direction)
+            self.position_changes.append(self.last_position_change)
 
         self.t += 1
         self.rnn_state0, self.rnn_state1 = rnn_state
@@ -98,6 +112,11 @@ class Agent:
         self.last_action = action
         self.last_value = value
         self.last_encode = encode[0]
+        self.last_rotation = 0
+        self.last_movement = 0
+        self.last_position = 0
+        self.last_direction = 0
+        self.last_position_change = 0
         return action
 
     def stop_episode_and_train(self, obs, reward, done=False):
@@ -107,6 +126,11 @@ class Agent:
             self.actions.append(self.last_action)
             self.encodes.append(self.last_encode)
             self.values.append(self.last_value)
+            self.rotations.append(self.last_rotation)
+            self.movements.append(self.last_movement)
+            self.positions.append(self.last_position)
+            self.directions.append(self.last_direction)
+            self.position_changes.append(self.last_position_change)
             self.train(0)
             self.stop_episode()
 
@@ -122,3 +146,8 @@ class Agent:
         self.rewards = []
         self.values = []
         self.encodes = []
+        self.rotations = []
+        self.movements = []
+        self.positions = []
+        self.directions = []
+        self.position_changes = []

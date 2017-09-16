@@ -9,7 +9,7 @@ def normalized_columns_initializer(std=1.0):
         return tf.constant(out)
     return _initializer
 
-def _make_network(inpt, rnn_state_tuple, num_actions, scope, reuse=None):
+def _make_network(inpt, rotate_inpt, movement_inpt, rnn_state_tuple, num_actions, scope, reuse=None):
     with tf.variable_scope(scope, reuse=reuse):
         out = inpt
         conv_out = layers.fully_connected(out, 256, activation_fn=tf.nn.relu)
@@ -30,7 +30,33 @@ def _make_network(inpt, rnn_state_tuple, num_actions, scope, reuse=None):
         value = layers.fully_connected(rnn_out, 1, activation_fn=None,
                 weights_initializer=normalized_columns_initializer(), biases_initializer=None)
 
-    return encode, value, lstm_state
+        rotate_inpt = tf.expand_dims(rotate_inpt, 1)
+        movement_inpt = tf.expand_dims(movement_inpt, 1)
+
+        out = tf.concat([rnn_out, rotate_inpt, movement_inpt], 1)
+        out = layers.fully_connected(out, 128, activation_fn=tf.nn.relu,
+                weights_initializer=normalized_columns_initializer(), biases_initializer=None)
+
+        hidden_place_cell = layers.fully_connected(out, 32, activation_fn=tf.nn.relu,
+                weights_initializer=normalized_columns_initializer(), biases_initializer=None)
+        place_cell = layers.fully_connected(hidden_place_cell, 1, activation_fn=None,
+                weights_initializer=normalized_columns_initializer(), biases_initializer=None)
+
+        hidden_head_cell = layers.fully_connected(out, 32, activation_fn=tf.nn.relu,
+                weights_initializer=normalized_columns_initializer(), biases_initializer=None)
+        head_cell = layers.fully_connected(hidden_head_cell, 1, activation_fn=None,
+                weights_initializer=normalized_columns_initializer(), biases_initializer=None)
+
+        hidden_grid_cell = layers.fully_connected(out, 32, activation_fn=tf.nn.relu,
+                weights_initializer=normalized_columns_initializer(), biases_initializer=None)
+        grid_cell = layers.fully_connected(hidden_grid_cell, 1, activation_fn=None,
+                weights_initializer=normalized_columns_initializer(), biases_initializer=None)
+
+        concated_cells = tf.concat([hidden_place_cell, hidden_head_cell, hidden_grid_cell], 1)
+        ca1 = layers.fully_connected(concated_cells, 32, activation_fn=tf.nn.relu,
+                weights_initializer=normalized_columns_initializer(), biases_initializer=None)
+
+    return encode, value, lstm_state, place_cell, head_cell, grid_cell, ca1
 
 def make_network():
     return lambda *args, **kwargs: _make_network(*args, **kwargs)
