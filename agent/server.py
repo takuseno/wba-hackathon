@@ -35,8 +35,6 @@ inbound_logger = logging.getLogger(INBOUND_KEY)
 app_logger = logging.getLogger(APP_KEY)
 outbound_logger = logging.getLogger(OUTBOUND_KEY)
 
-sess = tf.Session()
-
 def unpack(payload, depth_image_count=1, depth_image_dim=32*32):
     dat = msgpack.unpackb(payload)
 
@@ -76,7 +74,7 @@ feature_output_dim = (depth_image_dim * depth_image_count) + (image_feature_dim 
 
 
 class Root(object):
-    def __init__(self):
+    def __init__(self, sess):
         self.sess = sess
         with sess.as_default():
             model = make_network()
@@ -170,14 +168,17 @@ class Root(object):
         return str(result)
 
 def main(args):
+    config = tf.ConfigProto(gpu_options=tf.GPUOptions(visible_device_list=args.gpu))
+    sess = tf.Session(config=config)
     cherrypy.config.update({'server.socket_host': args.host, 'server.socket_port': args.port, 'log.screen': False,
                             'log.access_file': CHERRYPY_ACCESS_LOG, 'log.error_file': CHERRYPY_ERROR_LOG})
-    cherrypy.quickstart(Root())
+    cherrypy.quickstart(Root(sess))
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='LIS Backend')
     parser.add_argument('--host', default='localhost', type=str, help='Server hostname')
     parser.add_argument('--port', default=8765, type=int, help='Server port number')
+    parser.add_argument('--gpu', default='-1', type=str, help='Gpu id')
     args = parser.parse_args()
 
     main(args)
