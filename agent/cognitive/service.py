@@ -94,12 +94,12 @@ class AgentService:
 
         return action
 
-    def step(self, reward, observation, identifier):
+    def step(self, reward, rotation, movement, observation, identifier):
         if identifier not in self.agents:
             return str(-1)
         self.v1_components[identifier].get_out_port('Isocortex#V1-Isocortex#VVC-Output').buffer = observation
         self.rb_components[identifier].get_out_port('RB-Isocortex#FL-Output').buffer = np.array([reward])
-        self.rb_components[identifier].get_out_port('RB-BG-Output').buffer = np.array([reward])
+        self.rb_components[identifier].get_out_port('RB-BG-Output').buffer = np.array([reward, rotation, movement, observation])
         self.schedulers[identifier].step(5000)
 
         action = self.mo_components[identifier].get_in_port('Isocortex#FL-MO-Input').buffer[0]

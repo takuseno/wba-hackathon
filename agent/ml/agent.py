@@ -75,7 +75,7 @@ class Agent:
         self.rnn_state0, self.rnn_state1 = rnn_state
         return action
 
-    def act_and_train(self, obs, reward):
+    def act_and_train(self, obs, reward, rotation, movement, observation):
         prob, rnn_state, encode = self._act([obs], self.rnn_state0, self.rnn_state1, [0], [0])
         action = np.random.choice(range(self.num_actions), p=prob[0])
         value = self._state_value([obs], self.rnn_state0, self.rnn_state1)[0][0]
