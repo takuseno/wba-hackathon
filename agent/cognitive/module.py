@@ -75,9 +75,12 @@ class BGComponent(brica1.Component):
 
     def fire(self):
         reward = self.get_in_port('RB-BG-Input').buffer[0]
+        rotation = self.get_in_port('RB-BG-Input').buffer[1]
+        movement = self.get_in_port('RB-BG-Input').buffer[2]
+        observation = self.get_in_port('RB-BG-Input').buffer[3]
         features = self.get_in_port('Isocortex#VVC-BG-Input').buffer
 
-        action = self.agent.act_and_train(features, reward)
+        action = self.agent.act_and_train(features, reward, rotation, movement, observation)
         app_logger.info('action {}, reward {}'.format(action, reward))
 
         self.results['BG-Isocortex#FL-Output'] = np.array([action])

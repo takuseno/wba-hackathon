@@ -1,7 +1,7 @@
 import build_graph
 import numpy as np
 import tensorflow as tf
-
+from position_track import PositionTrack
 
 class Agent:
     def __init__(self, model, dnds, num_actions, name='global', lr=2.5e-4, gamma=0.99):
@@ -43,6 +43,7 @@ class Agent:
         self.positions = []
         self.directions = []
         self.position_changes = []
+        self.pos_track = PositionTrack()
 
     def append_experience(self, action, encode, advantage):
         self.dnds[action].write(encode, advantage)
@@ -75,10 +76,11 @@ class Agent:
         self.rnn_state0, self.rnn_state1 = rnn_state
         return action
 
-    def act_and_train(self, obs, reward):
+    def act_and_train(self, obs, reward, rotation, movement, observation):
         prob, rnn_state, encode = self._act([obs], self.rnn_state0, self.rnn_state1, [0], [0])
         action = np.random.choice(range(self.num_actions), p=prob[0])
         value = self._state_value([obs], self.rnn_state0, self.rnn_state1)[0][0]
+        self.pos_track.step(observation, rotation, movement)
 
         if len(self.states) == 50:
             self.train(self.last_value)
@@ -112,14 +114,15 @@ class Agent:
         self.last_action = action
         self.last_value = value
         self.last_encode = encode[0]
-        self.last_rotation = 0
-        self.last_movement = 0
-        self.last_position = 0
-        self.last_direction = 0
-        self.last_position_change = 0
+        self.last_rotation = rotation
+        self.last_movement = movement
+        self.last_position = self.pos_track.get_position()
+        self.last_direction = self.pos_track.get_rotation()
+        self.last_position_change = self.pos_track.get_velocity()
         return action
 
     def stop_episode_and_train(self, obs, reward, done=False):
+        self.pos_track.reset()
         if len(self.states) > 0:
             self.states.append(self.last_obs)
             self.rewards.append(reward - self.last_reward)
