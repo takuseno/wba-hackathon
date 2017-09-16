@@ -12,8 +12,9 @@ app_logger = logging.getLogger(APP_KEY)
 
 
 class AgentService:
-    def __init__(self, config_file, feature_extractor):
+    def __init__(self, config_file, feature_extractor, sess):
         self.feature_extractor = feature_extractor
+        self.sess = sess
         self.nb = interpreter.NetworkBuilder()
         f = open(config_file)
         self.nb.load_file(f)
@@ -27,7 +28,7 @@ class AgentService:
         self.mo_components = {}     # motor output
         self.rb_components = {}     # reward generator
 
-    def initialize(self, identifier):
+    def initialize(self, identifier, agent):
         agent_builder = interpreter.AgentBuilder()
         # create agetns and schedulers
         self.agents[identifier] = agent_builder.create_agent(self.nb)
@@ -53,6 +54,8 @@ class AgentService:
         # set feature_extractor
         self.vvc_components[identifier].set_model(self.feature_extractor)
 
+        self.bg_components[identifier].agent = agent
+
         # set interval of each components
         self.vvc_components[identifier].interval = 1000
         self.bg_components[identifier].interval = 1000
@@ -76,9 +79,9 @@ class AgentService:
 
         self.schedulers[identifier].update()
 
-    def create(self, reward, feature, identifier):
+    def create(self, reward, feature, identifier, agent):
         if identifier not in self.agents:
-            self.initialize(identifier)
+            self.initialize(identifier, agent)
 
         # agent start
         self.bg_components[identifier].get_in_port('Isocortex#VVC-BG-Input').buffer = feature

@@ -23,12 +23,19 @@ from config.log import CHERRYPY_ACCESS_LOG, CHERRYPY_ERROR_LOG, LOGGING, APP_KEY
 from cognitive.service import AgentService
 from tool.result_logger import ResultLogger
 
+import tensorflow as tf
+from ml.agent import Agent
+from ml.network import make_network
+from ml.dnd import DND
+from lightsaber.tensorflow.util import initialize
+
 logging.config.dictConfig(LOGGING)
 
 inbound_logger = logging.getLogger(INBOUND_KEY)
 app_logger = logging.getLogger(APP_KEY)
 outbound_logger = logging.getLogger(OUTBOUND_KEY)
 
+sess = tf.Session()
 
 def unpack(payload, depth_image_count=1, depth_image_dim=32*32):
     dat = msgpack.unpackb(payload)
@@ -69,61 +76,96 @@ feature_output_dim = (depth_image_dim * depth_image_count) + (image_feature_dim 
 
 
 class Root(object):
-    def __init__(self, **kwargs):
-        if os.path.exists(CNN_FEATURE_EXTRACTOR):
-            app_logger.info("loading... {}".format(CNN_FEATURE_EXTRACTOR))
-            self.feature_extractor = pickle.load(open(CNN_FEATURE_EXTRACTOR))
-            app_logger.info("done")
-        else:
-            self.feature_extractor = CnnFeatureExtractor(use_gpu, CAFFE_MODEL, MODEL_TYPE, image_feature_dim)
-            pickle.dump(self.feature_extractor, open(CNN_FEATURE_EXTRACTOR, 'w'))
-            app_logger.info("pickle.dump finished")
+    def __init__(self):
+        self.sess = sess
+        with sess.as_default():
+            model = make_network()
+            dnds = []
+            for i in range(3):
+                dnds.append(DND())
+            agent = Agent(model, dnds, 3, name='global')
 
-        self.agent_service = AgentService(BRICA_CONFIG_FILE, self.feature_extractor)
-        self.result_logger = ResultLogger()
+            self.agents = []
+            self.popped_agents = {}
+            for i in range(2):
+                self.agents.append(Agent(model, dnds, 3, name='worker{}'.format(i)))
+            initialize()
+
+            # load feature extractor (alex net)
+            if os.path.exists(CNN_FEATURE_EXTRACTOR):
+                app_logger.info("loading... {}".format(CNN_FEATURE_EXTRACTOR))
+                self.feature_extractor = pickle.load(open(CNN_FEATURE_EXTRACTOR))
+                app_logger.info("done")
+            else:
+                self.feature_extractor = CnnFeatureExtractor(use_gpu, CAFFE_MODEL, MODEL_TYPE, image_feature_dim)
+                pickle.dump(self.feature_extractor, open(CNN_FEATURE_EXTRACTOR, 'w'))
+                app_logger.info("pickle.dump finished")
+
+            self.agent_service = AgentService(BRICA_CONFIG_FILE, self.feature_extractor, sess)
+            self.result_logger = ResultLogger()
 
     @cherrypy.expose()
     def flush(self, identifier):
-        self.agent_service.initialize(identifier)
+        if identifier not in self.popped_agents:
+            agent = self.agents.pop(0)
+            self.popped_agents[identifier] = agent
+        else:
+            agent = self.popped_agents[identifier]
+        with self.sess.as_default():
+            self.agent_service.initialize(identifier, agent)
 
     @cherrypy.expose
     def create(self, identifier):
-        body = cherrypy.request.body.read()
-        reward, observation, rotation, movement = unpack(body)
+        if identifier not in self.popped_agents:
+            agent = self.agents.pop(0)
+            self.popped_agents[identifier] = agent
+        else:
+            agent = self.popped_agents[identifier]
+        with self.sess.as_default():
+            body = cherrypy.request.body.read()
+            reward, observation, rotation, movement = unpack(body)
 
-        inbound_logger.info('reward: {}, depth: {}'.format(reward, observation['depth']))
-        feature = self.feature_extractor.feature(observation)
-        self.result_logger.initialize()
-        result = self.agent_service.create(reward, feature, identifier)
+            inbound_logger.info('id: {}, reward: {}, depth: {}'.format(
+                identifier, reward, observation['depth']
+            ))
+            feature = self.feature_extractor.feature(observation)
+            self.result_logger.initialize()
+            result = self.agent_service.create(reward, feature, identifier, agent)
 
-        outbound_logger.info('action: {}'.format(result))
+            outbound_logger.info('id:{}, action: {}'.format(identifier, result))
 
         return str(result)
 
     @cherrypy.expose
     def step(self, identifier):
-        body = cherrypy.request.body.read()
-        reward, observation, rotation, movement = unpack(body)
+        with self.sess.as_default():
+            body = cherrypy.request.body.read()
+            reward, observation, rotation, movement = unpack(body)
 
-        inbound_logger.info('reward: {}, depth: {}'.format(reward, observation['depth']))
+            inbound_logger.info('id: {}, reward: {}, depth: {}'.format(
+                identifier, reward, observation['depth']
+            ))
 
-        result = self.agent_service.step(reward, observation, identifier)
-        self.result_logger.step()
-        outbound_logger.info('result: {}'.format(result))
+            result = self.agent_service.step(reward, observation, identifier)
+            self.result_logger.step()
+            outbound_logger.info('id: {}, result: {}'.format(
+                identifier, result
+            ))
         return str(result)
 
     @cherrypy.expose
     def reset(self, identifier):
-        body = cherrypy.request.body.read()
-        reward, success, failure, elapsed, finished = unpack_reset(body)
+        with self.sess.as_default():
+            body = cherrypy.request.body.read()
+            reward, success, failure, elapsed, finished = unpack_reset(body)
 
-        inbound_logger.info('reward: {}, success: {}, failure: {}, elapsed: {}'.format(
-            reward, success, failure, elapsed))
+            inbound_logger.info('reward: {}, success: {}, failure: {}, elapsed: {}'.format(
+                reward, success, failure, elapsed))
 
-        result = self.agent_service.reset(reward, identifier)
-        self.result_logger.report(success, failure, finished)
+            result = self.agent_service.reset(reward, identifier)
+            self.result_logger.report(success, failure, finished)
 
-        outbound_logger.info('result: {}'.format(result))
+            outbound_logger.info('result: {}'.format(result))
         return str(result)
 
 def main(args):
