@@ -89,6 +89,7 @@ class Root(object):
             self.popped_agents = {}
             for i in range(2):
                 self.agents.append(Agent(model, dnds, 3, name='worker{}'.format(i)))
+            summary_writer = tf.summary.FileWriter('board', sess.graph)
             initialize()
 
             # load feature extractor (alex net)
