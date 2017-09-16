@@ -30,7 +30,7 @@ def build_train(model, dnds, num_actions, optimizer, scope='a3c', reuse=None):
                 square_diff = tf.square(keys - tf.expand_dims(concated_encode, 1))
                 distances = tf.reduce_sum(square_diff, axis=2) + 1e-3
                 weights = 1 / distances
-                normalized_weights = weights / tf.reduce_sum(weights, axis=1, keep_dims=True)
+                normalized_weights = weights / tf.reduce_sum(weights, axis=1)
                 probs.append(tf.reduce_sum(normalized_weights * values, axis=1))
             policy = tf.nn.softmax(tf.transpose(probs))
 
