@@ -12,7 +12,6 @@ from PIL import Image
 from PIL import ImageOps
 
 from cognitive import interpreter
-from ml.cnn_feature_extractor import CnnFeatureExtractor
 
 from config import BRICA_CONFIG_FILE
 from config.model import TF_CNN_FEATURE_EXTRACTOR, CAFFE_MODEL, MODEL_TYPE
@@ -96,7 +95,8 @@ class Root(object):
 
             # load feature extractor (alex net)
             if os.path.exists(TF_CNN_FEATURE_EXTRACTOR):
-                gpu_config = None  # TODO: remove this
+	        config = tf.ConfigProto(gpu_options=tf.GPUOptions(visible_device_list='0', allow_growth=True))
+                gpu_config =  config # TODO: remove this
                 app_logger.info("loading... {}".format(TF_CNN_FEATURE_EXTRACTOR))
                 self.feature_extractor = FeatureExtractor(sess_name='AlexNet',
                                                           sess_config=gpu_config)
