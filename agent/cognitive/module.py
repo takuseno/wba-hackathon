@@ -8,7 +8,6 @@ import numpy as np
 import six.moves.cPickle as pickle
 
 from ml.cnn_feature_extractor import CnnFeatureExtractor
-from ml.q_net import QNet
 from ml.network import make_network
 from ml.agent import Agent
 from lightsaber.tensorflow.util import initialize, get_session
@@ -40,19 +39,10 @@ class VVCComponent(brica1.Component):
     def set_model(self, feature_extractor):
         self.feature_extractor = feature_extractor
 
-    def load_model(self, cnn_feature_extractor):
-        if os.path.exists(cnn_feature_extractor):
-            app_logger.info("loading... {}".format(cnn_feature_extractor))
-            self.feature_extractor = pickle.load(open(cnn_feature_extractor))
-            app_logger.info("done")
-        else:
-            self.feature_extractor = CnnFeatureExtractor(self.use_gpu, self.model, self.model_type,
-                                                         self.image_feature_dim)
-            pickle.dump(self.feature_extractor, open(cnn_feature_extractor, 'w'))
-            app_logger.info("pickle.dump finished")
-
     def fire(self):
         observation = self.get_in_port('Isocortex#V1-Isocortex#VVC-Input').buffer
+        # call feature extractor
+        print(observation)
         obs_array = self.feature_extractor.feature(observation, self.image_feature_count)
 
         self.results['Isocortex#VVC-BG-Output'] = obs_array

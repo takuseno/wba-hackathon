@@ -15,7 +15,9 @@ from cognitive import interpreter
 from ml.cnn_feature_extractor import CnnFeatureExtractor
 
 from config import BRICA_CONFIG_FILE
-from config.model import CNN_FEATURE_EXTRACTOR, CAFFE_MODEL, MODEL_TYPE
+from config.model import TF_CNN_FEATURE_EXTRACTOR, CAFFE_MODEL, MODEL_TYPE
+
+from tfalex.FeatureExtractor import FeatureExtractor
 
 import logging
 import logging.config
@@ -93,14 +95,15 @@ class Root(object):
             initialize()
 
             # load feature extractor (alex net)
-            if os.path.exists(CNN_FEATURE_EXTRACTOR):
-                app_logger.info("loading... {}".format(CNN_FEATURE_EXTRACTOR))
-                self.feature_extractor = pickle.load(open(CNN_FEATURE_EXTRACTOR))
+            if os.path.exists(TF_CNN_FEATURE_EXTRACTOR):
+                gpu_config = None  # TODO: remove this
+                app_logger.info("loading... {}".format(TF_CNN_FEATURE_EXTRACTOR))
+                self.feature_extractor = FeatureExtractor(sess_name='AlexNet',
+                                                          sess_config=gpu_config)
                 app_logger.info("done")
+
             else:
-                self.feature_extractor = CnnFeatureExtractor(use_gpu, CAFFE_MODEL, MODEL_TYPE, image_feature_dim)
-                pickle.dump(self.feature_extractor, open(CNN_FEATURE_EXTRACTOR, 'w'))
-                app_logger.info("pickle.dump finished")
+                raise Exception
 
             self.agent_service = AgentService(BRICA_CONFIG_FILE, self.feature_extractor, sess)
             self.result_logger = ResultLogger()
