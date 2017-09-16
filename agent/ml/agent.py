@@ -86,7 +86,7 @@ class Agent:
 
         if self.last_obs is not None:
             self.states.append(self.last_obs)
-            self.rewards.append(reward)
+            self.rewards.append(reward - self.last_reward)
             self.actions.append(self.last_action)
             self.values.append(self.last_value)
             self.encodes.append(self.last_encode)
@@ -103,7 +103,7 @@ class Agent:
     def stop_episode_and_train(self, obs, reward, done=False):
         if len(self.states) > 0:
             self.states.append(self.last_obs)
-            self.rewards.append(reward)
+            self.rewards.append(reward - self.last_reward)
             self.actions.append(self.last_action)
             self.encodes.append(self.last_encode)
             self.values.append(self.last_value)
