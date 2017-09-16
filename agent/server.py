@@ -95,7 +95,7 @@ class Root(object):
 
             # load feature extractor (alex net)
             if os.path.exists(TF_CNN_FEATURE_EXTRACTOR):
-                sess.config = None  # TODO: remove this
+                gpu_config = None  # TODO: remove this
                 app_logger.info("loading... {}".format(TF_CNN_FEATURE_EXTRACTOR))
                 self.feature_extractor = FeatureExtractor(sess_name='AlexNet',
                                                           sess_config=gpu_config)
