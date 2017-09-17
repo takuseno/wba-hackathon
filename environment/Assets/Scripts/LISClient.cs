@@ -20,7 +20,6 @@ public class LISClient {
     private Uri stepUri;
     private Uri resetUri;
     private Uri flushUri;
-    private Uri stageUri;
 
     public LISClient(string identifier) {
         UnityEngine.Debug.Log("Identifier: " + identifier);
@@ -28,7 +27,6 @@ public class LISClient {
         stepUri   = new Uri("http://" + host + ":" + port + "/step/" + identifier);
         resetUri  = new Uri("http://" + host + ":" + port + "/reset/" + identifier);
         flushUri  = new Uri("http://" + host + ":" + port + "/flush/" + identifier);
-        stageUri  = new Uri("http://" + host + ":" + port + "/update_stage/" + identifier);
     }
 
     public string GetAction() {

@@ -81,13 +81,12 @@ public class AgentBehaviour : MonoBehaviour {
         // Go to next stage if needed
         int sceneNum = GetSceneNum();
         if (sceneNum < client.latestScene) {
-            UnityEngine.Debug.Log("Stage skip -> " + client.latestScene);
+            UnityEngine.Debug.Log("Stage skip -> " + (sceneNum + 1));
             Finish();
             PlayerPrefs.SetInt("Success Count", 0);
             PlayerPrefs.SetInt("Failure Count", 0);
             EditorSceneManager.LoadScene(Scenes.Next());
         }
-
 
         if(!created) {
             if(!client.Calling) {
