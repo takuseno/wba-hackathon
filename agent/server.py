@@ -5,7 +5,8 @@ import os
 from threading import Lock
 
 import cherrypy
-import wsgiserver
+from wsgiref.simple_server import make_server, WSGIServer
+from SocketServer import ThreadingMixIn
 
 import msgpack
 import numpy as np
@@ -36,6 +37,10 @@ logging.config.dictConfig(LOGGING)
 inbound_logger = logging.getLogger(INBOUND_KEY)
 app_logger = logging.getLogger(APP_KEY)
 outbound_logger = logging.getLogger(OUTBOUND_KEY)
+
+
+class ThreadingWsgiServer(ThreadingMixIn, WSGIServer):
+    pass
 
 
 def unpack(payload, depth_image_count=1, depth_image_dim=32*32):
@@ -216,9 +221,14 @@ def main(args):
     # wsgi.WSGIServer((args.host, args.port), app).serve_forever()
 
     # wsgiserver
+    # app = cherrypy.tree.mount(Root(sess, args.logdir, args.workers), '/')
+    # server = wsgiserver.WSGIServer(app, host=args.host, port=args.port)
+    # server.start()
+
+    # wsgiref
     app = cherrypy.tree.mount(Root(sess, args.logdir, args.workers), '/')
-    server = wsgiserver.WSGIServer(app, host=args.host, port=args.port)
-    server.start()
+    server = make_server(args.host, args.port, app, ThreadingWsgiServer)
+    server.serve_forever()
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='LIS Backend')
