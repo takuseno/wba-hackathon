@@ -83,7 +83,7 @@ feature_output_dim = (depth_image_dim * depth_image_count) + (image_feature_dim 
 
 
 class Root(object):
-    def __init__(self, sess, logdir, num_workers):
+    def __init__(self, sess, logdir, num_workers, visualize):
         self.latest_stage = -1
         self.sess = sess
         with sess.as_default():
@@ -100,7 +100,9 @@ class Root(object):
             # CREATE NEW AGENT(S)
             for i in range(num_workers):
                 # CREATE PLOTTER PER AGENT
-                plotter = AnimatedLineGraph(0, 0, max_val=50)
+                plotter = (AnimatedLineGraph(0, 0, max_val=50)
+                           if visualize else None)
+
                 self.agents.append(Agent(model, dnds, 3,
                                          name='worker{}'.format(i),
                                          plotter=plotter)
@@ -232,7 +234,8 @@ def main(args):
     # server.start()
 
     # wsgiref
-    app = cherrypy.tree.mount(Root(sess, args.logdir, args.workers), '/')
+    app = cherrypy.tree.mount(Root(sess, args.logdir, args.workers,
+                                   args.visualize), '/')
     server = make_server(args.host, args.port, app, ThreadingWsgiServer)
     server.serve_forever()
 
@@ -243,6 +246,7 @@ if __name__ == '__main__':
     parser.add_argument('--gpu', default='-1', type=str, help='Gpu id')
     parser.add_argument('--logdir', default='board', type=str, help='log directory for tensorboard')
     parser.add_argument('--workers', default=4, type=int, help='the number of workers')
+    parser.add_argument('--visualize', action='store_true')
     args = parser.parse_args()
 
     main(args)
