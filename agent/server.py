@@ -77,7 +77,6 @@ feature_output_dim = (depth_image_dim * depth_image_count) + (image_feature_dim 
 
 class Root(object):
     def __init__(self, sess, logdir, num_workers):
-        self.lock = Lock()
         self.sess = sess
         with sess.as_default():
             model = make_network()
@@ -88,6 +87,7 @@ class Root(object):
 
             self.agents = []
             self.popped_agents = {}
+            self.popped_locks = {}
             for i in range(num_workers):
                 self.agents.append(Agent(model, dnds, 3, name='worker{}'.format(i)))
             summary_writer = tf.summary.FileWriter(logdir, sess.graph)
@@ -112,35 +112,35 @@ class Root(object):
 
     @cherrypy.expose()
     def flush(self, identifier):
-        self.lock.acquire()
         if identifier not in self.popped_agents:
             if len(self.agents) > 0:
+                self.popped_locks[identifier] = Lock()
                 agent = self.agents.pop(0)
                 self.popped_agents[identifier] = agent
                 self.agent_service.initialize(identifier, agent)
             else:
-                self.lock.release()
                 return
         else:
             agent = self.popped_agents[identifier]
+        self.popped_locks[identifier].acquire()
         with self.sess.as_default():
             self.agent_service.initialize(identifier, agent)
-        self.lock.release()
+        self.popped_locks[identifier].release()
 
     @cherrypy.expose
     def create(self, identifier):
-        self.lock.acquire()
         if identifier not in self.popped_agents:
             if __debug__:
                 os.system('spd-say "Agent Created"')
             if len(self.agents) > 0:
+                self.popped_locks[identifier] = Lock()
                 agent = self.agents.pop(0)
                 self.popped_agents[identifier] = agent
             else:
-                self.lock.release()
                 return
         else:
             agent = self.popped_agents[identifier]
+        self.popped_locks[identifier].acquire()
         with self.sess.as_default():
             body = cherrypy.request.body.read()
             reward, observation, rotation, movement = unpack(body)
@@ -153,12 +153,13 @@ class Root(object):
             result = self.agent_service.create(reward, feature, identifier, agent)
 
             outbound_logger.info('id:{}, action: {}'.format(identifier, result))
-        self.lock.release()
+        self.popped_locks[identifier].release()
         return str(result)
 
     @cherrypy.expose
     def step(self, identifier):
-        self.lock.acquire()
+        if identifier in self.popped_locks:
+            self.popped_locks[identifier].acquire()
         with self.sess.as_default():
             body = cherrypy.request.body.read()
             reward, observation, rotation, movement = unpack(body)
@@ -172,12 +173,14 @@ class Root(object):
             outbound_logger.info('id: {}, result: {}'.format(
                 identifier, result
             ))
-        self.lock.release()
+        if identifier in self.popped_locks:
+            self.popped_locks[identifier].release()
         return str(result)
 
     @cherrypy.expose
     def reset(self, identifier):
-        self.lock.acquire()
+        if identifier in self.popped_locks:
+            self.popped_locks[identifier].acquire()
         with self.sess.as_default():
             body = cherrypy.request.body.read()
             reward, success, failure, elapsed, finished = unpack_reset(body)
@@ -189,7 +192,8 @@ class Root(object):
             self.result_logger.report(success, failure, finished)
 
             outbound_logger.info('result: {}'.format(result))
-        self.lock.release()
+        if identifier in self.popped_locks:
+            self.popped_locks[identifier].release()
         return str(result)
 
 def main(args):
