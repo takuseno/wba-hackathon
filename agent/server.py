@@ -35,6 +35,7 @@ inbound_logger = logging.getLogger(INBOUND_KEY)
 app_logger = logging.getLogger(APP_KEY)
 outbound_logger = logging.getLogger(OUTBOUND_KEY)
 
+
 def unpack(payload, depth_image_count=1, depth_image_dim=32*32):
     dat = msgpack.unpackb(payload)
 
@@ -64,6 +65,7 @@ def unpack_reset(payload):
     finished = dat['finished']
 
     return reward, success, failure, elapsed, finished
+
 
 use_gpu = int(os.getenv('GPU', '-1'))
 depth_image_dim = 32 * 32
@@ -129,6 +131,8 @@ class Root(object):
     def create(self, identifier):
         self.lock.acquire()
         if identifier not in self.popped_agents:
+            if __debug__:
+                os.system('spd-say "Agent Created"')
             if len(self.agents) > 0:
                 agent = self.agents.pop(0)
                 self.popped_agents[identifier] = agent
