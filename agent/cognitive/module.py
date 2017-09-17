@@ -7,7 +7,6 @@ import brica1.gym
 import numpy as np
 import six.moves.cPickle as pickle
 
-from ml.cnn_feature_extractor import CnnFeatureExtractor
 from ml.network import make_network
 from ml.agent import Agent
 from lightsaber.tensorflow.util import initialize, get_session
