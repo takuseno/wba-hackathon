@@ -112,8 +112,13 @@ class Root(object):
     def flush(self, identifier):
         self.lock.acquire()
         if identifier not in self.popped_agents:
-            agent = self.agents.pop(0)
-            self.popped_agents[identifier] = agent
+            if len(self.agents) > 0:
+                agent = self.agents.pop(0)
+                self.popped_agents[identifier] = agent
+                self.agent_service.initialize(identifier, agent)
+            else:
+                self.lock.release()
+                return
         else:
             agent = self.popped_agents[identifier]
         with self.sess.as_default():
@@ -124,8 +129,12 @@ class Root(object):
     def create(self, identifier):
         self.lock.acquire()
         if identifier not in self.popped_agents:
-            agent = self.agents.pop(0)
-            self.popped_agents[identifier] = agent
+            if len(self.agents) > 0:
+                agent = self.agents.pop(0)
+                self.popped_agents[identifier] = agent
+            else:
+                self.lock.release()
+                return
         else:
             agent = self.popped_agents[identifier]
         with self.sess.as_default():
