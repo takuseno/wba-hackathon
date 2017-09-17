@@ -5,7 +5,7 @@ import os
 from threading import Lock
 
 import cherrypy
-from gevent import wsgi
+import wsgiserver
 
 import msgpack
 import numpy as np
@@ -212,8 +212,13 @@ def main(args):
     # cherrypy.quickstart(Root(sess, args.logdir, args.workers))
 
     # GEvent
+    # app = cherrypy.tree.mount(Root(sess, args.logdir, args.workers), '/')
+    # wsgi.WSGIServer((args.host, args.port), app).serve_forever()
+
+    # wsgiserver
     app = cherrypy.tree.mount(Root(sess, args.logdir, args.workers), '/')
-    wsgi.WSGIServer((args.host, args.port), app).serve_forever()
+    server = wsgiserver.WSGIServer(app, host=args.host, port=args.port)
+    server.start()
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='LIS Backend')
