@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 import argparse
-import cPickle as pickle
 import io
 import os
 from threading import Lock
