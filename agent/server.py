@@ -213,7 +213,7 @@ def main(args):
 
     # GEvent
     app = cherrypy.tree.mount(Root(sess, args.logdir, args.workers), '/')
-    wsgi.WSGIServer(('', args.port), app).serve_forever()
+    wsgi.WSGIServer((args.host, args.port), app).serve_forever()
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='LIS Backend')
