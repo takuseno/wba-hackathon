@@ -1,6 +1,5 @@
 # coding: utf-8
 
-import copy
 import os
 
 import brica1.gym
@@ -41,7 +40,6 @@ class VVCComponent(brica1.Component):
     def fire(self):
         observation = self.get_in_port('Isocortex#V1-Isocortex#VVC-Input').buffer
         # call feature extractor
-        print(observation)
         obs_array = self.feature_extractor.feature(observation, self.image_feature_count)
 
         self.results['Isocortex#VVC-BG-Output'] = obs_array
