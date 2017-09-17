@@ -80,8 +80,6 @@ public class AgentBehaviour : MonoBehaviour {
     void LateUpdate () {
         // Go to next stage if needed
         int sceneNum = GetSceneNum();
-        UnityEngine.Debug.Log("local " + sceneNum);
-        UnityEngine.Debug.Log("global " + client.latestScene);
         if (sceneNum < client.latestScene) {
             UnityEngine.Debug.Log("Stage skip -> " + client.latestScene);
             Finish();
