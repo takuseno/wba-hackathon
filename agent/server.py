@@ -10,12 +10,11 @@ import numpy as np
 from PIL import Image
 from PIL import ImageOps
 
-from cognitive import interpreter
-
 from config import BRICA_CONFIG_FILE
-from config.model import TF_CNN_FEATURE_EXTRACTOR, CAFFE_MODEL, MODEL_TYPE
+from config.model import TF_CNN_FEATURE_EXTRACTOR
 
 from tfalex.FeatureExtractor import FeatureExtractor
+from tool.visualizer import AnimatedLineGraph
 
 import logging
 import logging.config
@@ -88,8 +87,15 @@ class Root(object):
             self.agents = []
             self.popped_agents = {}
             self.popped_locks = {}
+
+            # CREATE NEW AGENT(S)
             for i in range(num_workers):
-                self.agents.append(Agent(model, dnds, 3, name='worker{}'.format(i)))
+                # CREATE PLOTTER PER AGENT
+                plotter = AnimatedLineGraph(0, 0, max_val=50)
+                self.agents.append(Agent(model, dnds, 3,
+                                         name='worker{}'.format(i),
+                                         plotter=plotter)
+                                   )
             summary_writer = tf.summary.FileWriter(logdir, sess.graph)
             for agent in self.agents:
                 agent.set_summary_writer(summary_writer)

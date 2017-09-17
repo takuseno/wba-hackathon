@@ -4,14 +4,6 @@ import os
 
 import brica1.gym
 import numpy as np
-<<<<<<< HEAD
-=======
-import six.moves.cPickle as pickle
-
-from ml.network import make_network
-from ml.agent import Agent
-from lightsaber.tensorflow.util import initialize, get_session
->>>>>>> bc706aacb9ef2daef6bd1329bf6a16aa50434a26
 
 from config.model import CNN_FEATURE_EXTRACTOR, CAFFE_MODEL, MODEL_TYPE
 
