@@ -64,15 +64,11 @@ class Agent:
         advantages = returns - values
 
         for i in range(len(advantages)):
-            self.append_experience(actions[i], self.encodes[i], advantages[i])
+            self.append_experience(actions[i], self.encodes[i], returns[i])
 
-        summary, place_loss_summary, head_loss_summary, grid_loss_summary, loss, place_loss, head_loss, grid_loss = self._train(
-                self.states, self.initial_state, self.initial_state, self.rotations, self.movements,
-                actions, returns, advantages, self.positions, self.directions, self.position_changes)
-        self.summary_writer.add_summary(summary, loss)
-        self.summary_writer.add_summary(place_loss_summary, place_loss)
-        self.summary_writer.add_summary(head_loss_summary, head_loss)
-        self.summary_writer.add_summary(grid_loss_summary, grid_loss)
+        summary, loss = self._train(self.states, self.initial_state, self.initial_state, self.rotations,
+                self.movements, actions, returns, advantages, self.positions, self.directions, self.position_changes)
+        self.summary_writer.add_summary(summary, self.t)
         self._update_local()
         return loss
 

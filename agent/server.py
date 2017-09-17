@@ -76,7 +76,7 @@ feature_output_dim = (depth_image_dim * depth_image_count) + (image_feature_dim 
 
 
 class Root(object):
-    def __init__(self, sess):
+    def __init__(self, sess, logdir, num_workers):
         self.lock = Lock()
         self.sess = sess
         with sess.as_default():
@@ -88,9 +88,9 @@ class Root(object):
 
             self.agents = []
             self.popped_agents = {}
-            for i in range(2):
+            for i in range(num_workers):
                 self.agents.append(Agent(model, dnds, 3, name='worker{}'.format(i)))
-            summary_writer = tf.summary.FileWriter('board', sess.graph)
+            summary_writer = tf.summary.FileWriter(logdir, sess.graph)
             for agent in self.agents:
                 agent.set_summary_writer(summary_writer)
             initialize()
@@ -186,13 +186,15 @@ def main(args):
     sess = tf.Session(config=config)
     cherrypy.config.update({'server.socket_host': args.host, 'server.socket_port': args.port, 'log.screen': False,
                             'log.access_file': CHERRYPY_ACCESS_LOG, 'log.error_file': CHERRYPY_ERROR_LOG})
-    cherrypy.quickstart(Root(sess))
+    cherrypy.quickstart(Root(sess, args.logdir, args.workers))
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='LIS Backend')
     parser.add_argument('--host', default='localhost', type=str, help='Server hostname')
     parser.add_argument('--port', default=8765, type=int, help='Server port number')
     parser.add_argument('--gpu', default='-1', type=str, help='Gpu id')
+    parser.add_argument('--logdir', default='board', type=str, help='log directory for tensorboard')
+    parser.add_argument('--workers', default=4, type=int, help='the number of workers')
     args = parser.parse_args()
 
     main(args)

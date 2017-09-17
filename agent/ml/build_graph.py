@@ -18,8 +18,10 @@ def build_train(model, dnds, num_actions, optimizer, scope='a3c', reuse=None):
         head_ph = tf.placeholder(tf.float32, [None], name='head')
         grid_ph = tf.placeholder(tf.float32, [None, 3], name='grid')
 
-        encode, value, state_out, place_cell, head_cell, grid_cell, ca1 = model(
+        encode, value, state_out, place_cell, head_cell, grid_cell, ca1, hidden_place_cell = model(
                 obs_input, rotate_input, movement_input, rnn_state_tuple, num_actions, scope='model')
+
+        place_cell_summary = tf.summary.histogram('{}_place_cell_histogram'.format(scope), hidden_place_cell)
 
         with tf.name_scope('dnd'):
             concated_encode = tf.concat([encode, ca1], 1)
@@ -39,22 +41,32 @@ def build_train(model, dnds, num_actions, optimizer, scope='a3c', reuse=None):
         with tf.name_scope('loss'):
             log_policy = tf.log(tf.clip_by_value(policy, 1e-20, 1.0))
             value_loss = tf.nn.l2_loss(target_values_ph - tf.reshape(value, [-1]), name='value_loss')
+            value_loss_summary = tf.summary.scalar('{}_value_loss'.format(scope), value_loss)
 
             entropy = -tf.reduce_sum(policy * log_policy)
             policy_loss = -tf.reduce_sum(tf.reduce_sum(
                     tf.multiply(log_policy, actions_one_hot)) * advantages_ph + entropy * 0.01, name='policy_loss')
 
-            place_loss = tf.nn.l2_loss(place_ph - place_cell, name='place_loss')
+            place_loss = tf.reduce_sum(tf.square(place_ph - place_cell), name='place_loss')
             place_loss_summary = tf.summary.scalar('{}_place_loss'.format(scope), place_loss)
 
-            head_loss = tf.nn.l2_loss(head_ph - head_cell, name='head_loss')
+            head_loss = tf.reduce_sum(tf.square(head_ph - head_cell), name='head_loss')
             head_loss_summary = tf.summary.scalar('{}_head_loss'.format(scope), head_loss)
 
-            grid_loss = tf.nn.l2_loss(grid_ph - grid_cell, name='grid_loss')
+            grid_loss = tf.reduce_sum(tf.square(grid_ph - grid_cell), name='grid_loss')
             grid_loss_summary = tf.summary.scalar('{}_grid_loss'.format(scope), grid_loss)
 
             loss = 0.5 * value_loss + policy_loss + 0.1 * place_loss + 0.1 * head_loss + 0.1 * grid_loss
             loss_summary = tf.summary.scalar('{}_loss'.format(scope), loss)
+
+            summary = tf.summary.merge([
+                value_loss_summary,
+                place_loss_summary,
+                head_loss_summary,
+                grid_loss_summary,
+                loss_summary,
+                place_cell_summary
+            ])
 
         local_vars = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope)
         gradients, _ = tf.clip_by_global_norm(tf.gradients(loss, local_vars), 40.0)
@@ -73,7 +85,7 @@ def build_train(model, dnds, num_actions, optimizer, scope='a3c', reuse=None):
                 obs_input, rnn_state_ph0, rnn_state_ph1, rotate_input, movement_input,
                         actions_ph, target_values_ph, advantages_ph, place_ph, head_ph, grid_ph
             ],
-            outputs=[loss_summary, place_loss_summary, head_loss_summary, grid_loss_summary, loss, place_loss, head_loss, grid_loss],
+            outputs=[summary, loss],
             updates=[optimize_expr]
         )
 
