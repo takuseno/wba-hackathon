@@ -97,7 +97,7 @@ class Root(object):
 
             # load feature extractor (alex net)
             if os.path.exists(TF_CNN_FEATURE_EXTRACTOR):
-	        config = tf.ConfigProto(gpu_options=tf.GPUOptions(visible_device_list='0', allow_growth=True))
+                config = tf.ConfigProto(gpu_options=tf.GPUOptions(visible_device_list='0', allow_growth=True))
                 gpu_config =  config # TODO: remove this
                 app_logger.info("loading... {}".format(TF_CNN_FEATURE_EXTRACTOR))
                 self.feature_extractor = FeatureExtractor(sess_name='AlexNet',
