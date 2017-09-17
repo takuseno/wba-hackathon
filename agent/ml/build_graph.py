@@ -5,8 +5,8 @@ import lightsaber.tensorflow.util as util
 def build_train(model, dnds, num_actions, optimizer, scope='a3c', reuse=None):
     with tf.variable_scope(scope, reuse=reuse):
         obs_input = tf.placeholder(tf.float32, [None, 10240], name='obs')
-        rnn_state_ph0 = tf.placeholder(tf.float32, [1, 256], name='rnn_state0')
-        rnn_state_ph1 = tf.placeholder(tf.float32, [1, 256], name='rnn_state1')
+        rnn_state_ph0 = tf.placeholder(tf.float32, [1, 258], name='rnn_state0')
+        rnn_state_ph1 = tf.placeholder(tf.float32, [1, 258], name='rnn_state1')
         rotate_input = tf.placeholder(tf.float32, [None], name='rotation')
         movement_input = tf.placeholder(tf.float32, [None], name='movement')
 
@@ -91,7 +91,7 @@ def build_train(model, dnds, num_actions, optimizer, scope='a3c', reuse=None):
 
         action_dist = util.function([obs_input, rnn_state_ph0, rnn_state_ph1, rotate_input, movement_input], policy)
 
-        state_value = util.function([obs_input, rnn_state_ph0, rnn_state_ph1], value)
+        state_value = util.function([obs_input, rnn_state_ph0, rnn_state_ph1, rotate_input, movement_input], value)
 
         act = util.function(inputs=[obs_input, rnn_state_ph0, rnn_state_ph1,
                 rotate_input, movement_input], outputs=[policy, state_out, concated_encode])
