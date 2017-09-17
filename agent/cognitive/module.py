@@ -67,10 +67,10 @@ class BGComponent(brica1.Component):
         observation = self.get_in_port('RB-BG-Input').buffer[3]
         features = self.get_in_port('Isocortex#VVC-BG-Input').buffer
 
-        action = self.agent.act_and_train(features, reward, rotation, movement, observation)
+        action, place_cell, position = self.agent.act_and_train(features, reward, rotation, movement, observation)
         app_logger.info('action {}, reward {}'.format(action, reward))
 
-        self.results['BG-Isocortex#FL-Output'] = np.array([action])
+        self.results['BG-Isocortex#FL-Output'] = (action, place_cell, position)
 
 
 class UBComponent(brica1.Component):
@@ -104,9 +104,9 @@ class FLComponent(brica1.Component):
         self.last_action = np.array([0])
 
     def fire(self):
-        action = self.get_in_port('BG-Isocortex#FL-Input').buffer
+        action, place_cell, position  = self.get_in_port('BG-Isocortex#FL-Input').buffer
         reward = self.get_in_port('RB-Isocortex#FL-Input').buffer
-        self.results['Isocortex#FL-MO-Output'] = action
+        self.results['Isocortex#FL-MO-Output'] = (action, place_cell, position)
         self.results['Isocortex#FL-UB-Output'] = [self.last_action, reward]
 
         self.last_action = action

@@ -94,6 +94,6 @@ def build_train(model, dnds, num_actions, optimizer, scope='a3c', reuse=None):
         state_value = util.function([obs_input, rnn_state_ph0, rnn_state_ph1, rotate_input, movement_input], value)
 
         act = util.function(inputs=[obs_input, rnn_state_ph0, rnn_state_ph1,
-                rotate_input, movement_input], outputs=[policy, state_out, concated_encode])
+                rotate_input, movement_input], outputs=[policy, state_out, concated_encode, hidden_place_cell])
 
     return act, train, update_local, action_dist, state_value

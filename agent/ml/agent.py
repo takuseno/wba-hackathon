@@ -81,7 +81,7 @@ class Agent:
         return action
 
     def act_and_train(self, obs, reward, rotation, movement, observation):
-        prob, rnn_state, encode = self._act([obs], self.rnn_state0, self.rnn_state1, [rotation], [movement])
+        prob, rnn_state, encode, place_cell = self._act([obs], self.rnn_state0, self.rnn_state1, [rotation], [movement])
         action = np.random.choice(range(self.num_actions), p=prob[0])
         value = self._state_value([obs], self.rnn_state0, self.rnn_state1, [rotation], [movement])[0][0]
         self.pos_track.step(observation, rotation, movement)
@@ -123,7 +123,7 @@ class Agent:
         self.last_position = self.pos_track.get_position()
         self.last_direction = self.pos_track.get_rotation()
         self.last_position_change = self.pos_track.get_velocity()
-        return action
+        return action, place_cell[0], self.last_position
 
     def stop_episode_and_train(self, obs, reward, done=False):
         self.pos_track.reset()

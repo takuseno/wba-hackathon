@@ -102,9 +102,9 @@ class AgentService:
         self.rb_components[identifier].get_out_port('RB-BG-Output').buffer = np.array([reward, rotation, movement, observation])
         self.schedulers[identifier].step(5000)
 
-        action = self.mo_components[identifier].get_in_port('Isocortex#FL-MO-Input').buffer[0]
+        action, place_cell, position = self.mo_components[identifier].get_in_port('Isocortex#FL-MO-Input').buffer
 
-        return action
+        return action, place_cell, position
 
     def reset(self, reward, identifier):
         if identifier not in self.agents:

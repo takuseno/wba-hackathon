@@ -2,6 +2,7 @@
 import argparse
 import io
 import os
+import csv
 from threading import Lock
 
 import cherrypy
@@ -77,7 +78,8 @@ feature_output_dim = (depth_image_dim * depth_image_count) + (image_feature_dim 
 
 
 class Root(object):
-    def __init__(self, sess, logdir, num_workers):
+    def __init__(self, sess, logdir, num_workers, is_csv_saved):
+        self.is_csv_saved = is_csv_saved
         self.latest_stage = -1
         self.sess = sess
         with sess.as_default():
@@ -90,6 +92,7 @@ class Root(object):
             self.agents = []
             self.popped_agents = {}
             self.popped_locks = {}
+            self.csv_wirters = {}
             for i in range(num_workers):
                 self.agents.append(Agent(model, dnds, 3, name='worker{}'.format(i)))
             summary_writer = tf.summary.FileWriter(logdir, sess.graph)
@@ -120,6 +123,9 @@ class Root(object):
                 agent = self.agents.pop(0)
                 self.popped_agents[identifier] = agent
                 self.agent_service.initialize(identifier, agent)
+                if self.is_csv_saved:
+                    csv_file = open(os.path.join(os.path.dirname(__file__), '{}.csv'.format(identifier)), 'w')
+                    self.csv_wirters[identifier] = csv.writer(csv_file, delimiter=',', quoting=csv.QUOTE_MINIMAL)
             else:
                 return
         else:
@@ -138,6 +144,9 @@ class Root(object):
                 self.popped_locks[identifier] = Lock()
                 agent = self.agents.pop(0)
                 self.popped_agents[identifier] = agent
+                if self.is_csv_saved:
+                    csv_file = open(os.path.join(os.path.dirname(__file__), '{}.csv'.format(identifier)), 'w')
+                    self.csv_wirters[identifier] = csv.writer(csv_file, delimiter=',', quoting=csv.QUOTE_MINIMAL)
             else:
                 return
         else:
@@ -172,11 +181,16 @@ class Root(object):
                 identifier, reward, observation['depth']
             ))
 
-            result = self.agent_service.step(reward, rotation, movement, observation, identifier)
+            result, place_cell, position = self.agent_service.step(reward, rotation, movement, observation, identifier)
             self.result_logger.step()
             outbound_logger.info('id: {}, result: {}'.format(
                 identifier, result
             ))
+            if self.is_csv_saved:
+                image = observation['image'][0]
+                image = np.asarray(image.convert('L')).astype(np.float32)
+                csv_data = position.tolist() + place_cell.tolist() + image.flatten().tolist()
+                self.csv_wirters[identifier].writerow(csv_data)
         if identifier in self.popped_locks:
             self.popped_locks[identifier].release()
         return str(result) + "/" + str(self.latest_stage)
@@ -205,7 +219,7 @@ def main(args):
     sess = tf.Session(config=config)
     cherrypy.config.update({'server.socket_host': args.host, 'server.socket_port': args.port, 'log.screen': False,
                             'log.access_file': CHERRYPY_ACCESS_LOG, 'log.error_file': CHERRYPY_ERROR_LOG})
-    cherrypy.quickstart(Root(sess, args.logdir, args.workers))
+    cherrypy.quickstart(Root(sess, args.logdir, args.workers, args.csv))
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='LIS Backend')
@@ -214,6 +228,7 @@ if __name__ == '__main__':
     parser.add_argument('--gpu', default='-1', type=str, help='Gpu id')
     parser.add_argument('--logdir', default='board', type=str, help='log directory for tensorboard')
     parser.add_argument('--workers', default=4, type=int, help='the number of workers')
+    parser.add_argument('--csv', action='store_true', help='save csv file')
     args = parser.parse_args()
 
     main(args)
