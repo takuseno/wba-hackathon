@@ -4,7 +4,8 @@ using MsgPack;
 [RequireComponent(typeof (AgentController))]
 [RequireComponent(typeof (AgentSensor))]
 public class AgentBehaviour : MonoBehaviour {
-    private LISClient client = new LISClient("myagent");
+    static public string identifier = "myagent_" + System.Guid.NewGuid();
+    static private LISClient client = new LISClient(identifier);
 
     private AgentController controller;
     private AgentSensor sensor;
