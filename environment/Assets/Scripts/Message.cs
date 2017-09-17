@@ -5,6 +5,7 @@
     public byte[][] floor = null;
     public float rotation = 0.0F;
     public float movement = 0.0F;
+    public int scene_num = 0;
 }
 
 public class ResetMessage {

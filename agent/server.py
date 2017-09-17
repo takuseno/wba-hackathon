@@ -51,8 +51,9 @@ def unpack(payload, depth_image_count=1, depth_image_dim=32*32):
     observation = {"image": image, "depth": depth}
     rotation = dat['rotation']
     movement = dat['movement']
+    scene_num = dat['scene_num']
 
-    return reward, observation, rotation, movement
+    return reward, observation, rotation, movement, scene_num
 
 
 def unpack_reset(payload):
@@ -76,6 +77,7 @@ feature_output_dim = (depth_image_dim * depth_image_count) + (image_feature_dim 
 class Root(object):
     def __init__(self, sess, logdir, num_workers):
         self.lock = Lock()
+        self.latest_stage = -1
         self.sess = sess
         with sess.as_default():
             model = make_network()
@@ -139,7 +141,8 @@ class Root(object):
             agent = self.popped_agents[identifier]
         with self.sess.as_default():
             body = cherrypy.request.body.read()
-            reward, observation, rotation, movement = unpack(body)
+            reward, observation, rotation, movement, scene_num = unpack(body)
+            self.latest_stage = max(scene_num, self.latest_stage)
 
             inbound_logger.info('id: {}, reward: {}, depth: {}'.format(
                 identifier, reward, observation['depth']
@@ -157,7 +160,8 @@ class Root(object):
         self.lock.acquire()
         with self.sess.as_default():
             body = cherrypy.request.body.read()
-            reward, observation, rotation, movement = unpack(body)
+            reward, observation, rotation, movement, scene_num = unpack(body)
+            self.latest_stage = max(scene_num, self.latest_stage)
 
             inbound_logger.info('id: {}, reward: {}, depth: {}'.format(
                 identifier, reward, observation['depth']
@@ -169,7 +173,7 @@ class Root(object):
                 identifier, result
             ))
         self.lock.release()
-        return str(result)
+        return str(result) + "/" + str(self.latest_stage)
 
     @cherrypy.expose
     def reset(self, identifier):
