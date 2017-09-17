@@ -8,7 +8,7 @@ public class Startup : MonoBehaviour {
     [SerializeField]
     float MovementSpeed;
 
-    [SerializeField]
+    // [SerializeField]
     string[] SceneNames = {
         "OneDimTask1",
         "OneDimTask2",
@@ -17,6 +17,12 @@ public class Startup : MonoBehaviour {
         "OneDimTask5",
         "OneDimTask6",
         "OneDimTask7",
+        "OneDimTask8",
+
+        "OneDimTask8a",
+        "OneDimTask8b",
+        "OneDimTask8c",
+        "OneDimTask8d",
 
         "CrossMazeTask1",
         "CrossMazeTask2",
@@ -24,14 +30,7 @@ public class Startup : MonoBehaviour {
         "ArrowMazeTask1",
         "ArrowMazeTask2",
         "ArrowMazeTask3",
-
-		"OneDimTask8a",
-		"OneDimTask8b",
-		"OneDimTask8c",
-		"OneDimTask8d",
-
-	
-	};
+    };
 
     [SerializeField]
     bool ManualOverride = false;
