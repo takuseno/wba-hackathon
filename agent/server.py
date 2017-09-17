@@ -5,6 +5,8 @@ import os
 from threading import Lock
 
 import cherrypy
+from gevent import wsgi
+
 import msgpack
 import numpy as np
 from PIL import Image
@@ -205,7 +207,13 @@ def main(args):
     sess = tf.Session(config=config)
     cherrypy.config.update({'server.socket_host': args.host, 'server.socket_port': args.port, 'log.screen': False,
                             'log.access_file': CHERRYPY_ACCESS_LOG, 'log.error_file': CHERRYPY_ERROR_LOG})
-    cherrypy.quickstart(Root(sess, args.logdir, args.workers))
+
+    # Cherrypy Original
+    # cherrypy.quickstart(Root(sess, args.logdir, args.workers))
+
+    # GEvent
+    app = cherrypy.tree.mount(Root(sess, args.logdir, args.workers), '/')
+    wsgi.WSGIServer(('', args.port), app).serve_forever()
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='LIS Backend')
