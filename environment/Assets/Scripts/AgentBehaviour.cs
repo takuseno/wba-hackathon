@@ -88,6 +88,14 @@ public class AgentBehaviour : MonoBehaviour {
             EditorSceneManager.LoadScene(Scenes.Next());
         }
 
+        if (client.Calling) {
+            float delay_sec = Time.realtimeSinceStartup - client.LastCallSec;
+            if (delay_sec > LISClient.MAX_DELAY_SEC) {
+                UnityEngine.Debug.Log("POST delay is detected: " + delay_sec);
+                System.Threading.Thread.Sleep(500);
+            }
+        }
+
         if(!created) {
             if(!client.Calling) {
                 client.Create(GenerateMessage());

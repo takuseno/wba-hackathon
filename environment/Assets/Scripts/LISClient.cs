@@ -9,11 +9,14 @@ public class LISClient {
     private HttpClient client = new HttpClient();
     private Queue<string> queue = new Queue<string>(){};
 
+    public const float MAX_DELAY_SEC = 0.5f;
+
     public string host = "localhost";
     public string port = "8765";
 
     public bool HasAction = false;
     public bool Calling = false;
+    public float LastCallSec = 0.0f;
     public int latestScene = -1;
 
     private Uri createUri;
@@ -37,6 +40,7 @@ public class LISClient {
 
     void Call(Uri uri, byte[] payload) {
         Calling = true;
+        LastCallSec = Time.realtimeSinceStartup;
         client.Post(uri, new ByteArrayContent(payload, "text/plain"), (r) => {
                 string rawData = r.Data;
                 string[] data = rawData.Split(new Char[] {'/'});
@@ -48,6 +52,7 @@ public class LISClient {
                 }
                 HasAction = true;
                 Calling = false;
+                LastCallSec = Time.realtimeSinceStartup;
             });
     }
 
