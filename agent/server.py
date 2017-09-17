@@ -75,9 +75,6 @@ feature_output_dim = (depth_image_dim * depth_image_count) + (image_feature_dim 
 
 class Root(object):
     def __init__(self, sess, logdir, num_workers):
-        self.locks = []
-        for i in range(num_workers):
-            self.locks.append(Lock())
         self.sess = sess
         with sess.as_default():
             model = make_network()
@@ -115,8 +112,7 @@ class Root(object):
     def flush(self, identifier):
         if identifier not in self.popped_agents:
             if len(self.agents) > 0:
-                lock = self.locks.pop(0)
-                self.popped_locks[identifier] = lock
+                self.popped_locks[identifier] = Lock()
                 agent = self.agents.pop(0)
                 self.popped_agents[identifier] = agent
                 self.agent_service.initialize(identifier, agent)
@@ -133,8 +129,7 @@ class Root(object):
     def create(self, identifier):
         if identifier not in self.popped_agents:
             if len(self.agents) > 0:
-                lock = self.locks.pop(0)
-                self.popped_locks[identifier] = lock
+                self.popped_locks[identifier] = Lock()
                 agent = self.agents.pop(0)
                 self.popped_agents[identifier] = agent
             else:
