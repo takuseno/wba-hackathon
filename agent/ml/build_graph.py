@@ -18,8 +18,10 @@ def build_train(model, dnds, num_actions, optimizer, scope='a3c', reuse=None):
         head_ph = tf.placeholder(tf.float32, [None], name='head')
         grid_ph = tf.placeholder(tf.float32, [None, 3], name='grid')
 
-        encode, value, state_out, place_cell, head_cell, grid_cell, ca1 = model(
+        encode, value, state_out, place_cell, head_cell, grid_cell, ca1, hidden_place_cell = model(
                 obs_input, rotate_input, movement_input, rnn_state_tuple, num_actions, scope='model')
+
+        place_cell_summary = tf.summary.histogram('{}_place_cell_histogram'.format(scope), hidden_place_cell)
 
         with tf.name_scope('dnd'):
             concated_encode = tf.concat([encode, ca1], 1)
@@ -62,7 +64,8 @@ def build_train(model, dnds, num_actions, optimizer, scope='a3c', reuse=None):
                 place_loss_summary,
                 head_loss_summary,
                 grid_loss_summary,
-                loss_summary
+                loss_summary,
+                place_cell_summary
             ])
 
         local_vars = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope)

@@ -56,7 +56,7 @@ def _make_network(inpt, rotate_inpt, movement_inpt, rnn_state_tuple, num_actions
         ca1 = layers.fully_connected(concated_cells, 32, activation_fn=tf.nn.relu,
                 weights_initializer=normalized_columns_initializer(), biases_initializer=None, scope='ca1')
 
-    return encode, value, lstm_state, place_cell, head_cell, grid_cell, ca1
+    return encode, value, lstm_state, place_cell, head_cell, grid_cell, ca1, hidden_place_cell
 
 def make_network():
     return lambda *args, **kwargs: _make_network(*args, **kwargs)
