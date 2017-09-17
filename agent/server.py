@@ -4,7 +4,6 @@ import io
 import os
 from threading import Lock
 
-import brica1
 import cherrypy
 import msgpack
 import numpy as np
