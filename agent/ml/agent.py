@@ -25,7 +25,7 @@ class Agent:
         self._action_dist = action_dist
         self._state_value = state_value
 
-        self.initial_state = np.zeros((1, 256), np.float32)
+        self.initial_state = np.zeros((1, 258), np.float32)
         self.rnn_state0 = self.initial_state
         self.rnn_state1 = self.initial_state
         self.last_obs = None
@@ -81,9 +81,9 @@ class Agent:
         return action
 
     def act_and_train(self, obs, reward, rotation, movement, observation):
-        prob, rnn_state, encode = self._act([obs], self.rnn_state0, self.rnn_state1, [0], [0])
+        prob, rnn_state, encode = self._act([obs], self.rnn_state0, self.rnn_state1, [rotation], [movement])
         action = np.random.choice(range(self.num_actions), p=prob[0])
-        value = self._state_value([obs], self.rnn_state0, self.rnn_state1)[0][0]
+        value = self._state_value([obs], self.rnn_state0, self.rnn_state1, [rotation], [movement])[0][0]
         self.pos_track.step(observation, rotation, movement)
 
         if len(self.states) == 50:
