@@ -19,6 +19,7 @@ public class LISClient {
     private Uri flushUri;
 
     public LISClient(string identifier) {
+        UnityEngine.Debug.Log("Identifier: " + identifier);
         createUri = new Uri("http://" + host + ":" + port + "/create/" + identifier);
         stepUri   = new Uri("http://" + host + ":" + port + "/step/" + identifier);
         resetUri  = new Uri("http://" + host + ":" + port + "/reset/" + identifier);
