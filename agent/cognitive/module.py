@@ -45,7 +45,6 @@ class BGComponent(brica1.Component):
     def __init__(self, n_input=10240, n_output=1, agent=None):
         super(BGComponent, self).__init__()
         self.use_gpu = use_gpu
-        actions = [0, 1, 2]
         self.input_dim = n_input
 
     def start(self):

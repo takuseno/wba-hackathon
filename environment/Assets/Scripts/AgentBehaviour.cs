@@ -1,4 +1,5 @@
 ﻿using UnityEngine;
+using UnityEditor.SceneManagement;
 using MsgPack;
 
 [RequireComponent(typeof (AgentController))]
@@ -22,12 +23,17 @@ public class AgentBehaviour : MonoBehaviour {
         }
     }
 
+    int GetSceneNum() {
+        return PlayerPrefs.GetInt("Scene Number") + 1;
+    }
+
     byte[] GenerateMessage() {
         Message msg = new Message();
 
         msg.reward = PlayerPrefs.GetFloat("Reward");
         msg.image = sensor.GetRgbImages();
         msg.depth = sensor.GetDepthImages();
+        msg.scene_num = GetSceneNum();  // Scene number
 
         switch(lastAction) {
         case "0":
@@ -70,8 +76,18 @@ public class AgentBehaviour : MonoBehaviour {
         controller = GetComponent<AgentController>();
         sensor = GetComponent<AgentSensor>();
     }
-	
+
     void LateUpdate () {
+        // Go to next stage if needed
+        int sceneNum = GetSceneNum();
+        if (sceneNum < client.latestScene) {
+            UnityEngine.Debug.Log("Stage skip -> " + (sceneNum + 1));
+            Finish();
+            PlayerPrefs.SetInt("Success Count", 0);
+            PlayerPrefs.SetInt("Failure Count", 0);
+            EditorSceneManager.LoadScene(Scenes.Next());
+        }
+
         if(!created) {
             if(!client.Calling) {
                 client.Create(GenerateMessage());
@@ -81,7 +97,6 @@ public class AgentBehaviour : MonoBehaviour {
             if(client.HasAction) {
                 lastAction = client.GetAction();
                 controller.PerformAction(lastAction);
-                
             }
             if(!client.Calling) {
                 client.Step(GenerateMessage());

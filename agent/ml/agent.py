@@ -3,13 +3,16 @@ import numpy as np
 import tensorflow as tf
 from position_track import PositionTrack
 
+
 class Agent:
-    def __init__(self, model, dnds, num_actions, name='global', lr=2.5e-4, gamma=0.99):
+    def __init__(self, model, dnds, num_actions, name='global', lr=2.5e-4,
+                 gamma=0.99, plotter=None):
         self.num_actions = num_actions
         self.gamma = gamma
         self.t = 0
         self.name = name
         self.dnds = dnds
+        self.plotter = plotter
 
         act, train, update_local, action_dist, state_value = build_graph.build_train(
             model=model,
@@ -83,7 +86,13 @@ class Agent:
     def act_and_train(self, obs, reward, rotation, movement, observation):
         prob, rnn_state, encode = self._act([obs], self.rnn_state0, self.rnn_state1, [rotation], [movement])
         action = np.random.choice(range(self.num_actions), p=prob[0])
+
         value = self._state_value([obs], self.rnn_state0, self.rnn_state1, [rotation], [movement])[0][0]
+
+        # plot value
+        if self.plotter is not None:
+            self.plotter.update([value.tolist()])
+
         self.pos_track.step(observation, rotation, movement)
 
         if len(self.states) == 50:

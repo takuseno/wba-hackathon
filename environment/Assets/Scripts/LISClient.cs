@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using CI.HttpClient;
+using UnityEngine;
+using System.Text;
 
 
 public class LISClient {
@@ -12,6 +14,7 @@ public class LISClient {
 
     public bool HasAction = false;
     public bool Calling = false;
+    public int latestScene = -1;
 
     private Uri createUri;
     private Uri stepUri;
@@ -35,7 +38,14 @@ public class LISClient {
     void Call(Uri uri, byte[] payload) {
         Calling = true;
         client.Post(uri, new ByteArrayContent(payload, "text/plain"), (r) => {
-                queue.Enqueue(r.Data);
+                string rawData = r.Data;
+                string[] data = rawData.Split(new Char[] {'/'});
+                // Action
+                queue.Enqueue(data[0]);
+                // Scene number
+                if (data.Length > 1) {
+                    Int32.TryParse(data[1], out latestScene);
+                }
                 HasAction = true;
                 Calling = false;
             });
@@ -44,7 +54,7 @@ public class LISClient {
     public void Create(byte[] payload) {
         Call(createUri, payload);
     }
-	
+
     public void Step(byte[] payload) {
         Call(stepUri, payload);
     }

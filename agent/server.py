@@ -5,6 +5,9 @@ import os
 from threading import Lock
 
 import cherrypy
+from wsgiref.simple_server import make_server, WSGIServer
+from SocketServer import ThreadingMixIn
+
 import msgpack
 import numpy as np
 from PIL import Image
@@ -35,6 +38,10 @@ app_logger = logging.getLogger(APP_KEY)
 outbound_logger = logging.getLogger(OUTBOUND_KEY)
 
 
+class ThreadingWsgiServer(ThreadingMixIn, WSGIServer):
+    pass
+
+
 def unpack(payload, depth_image_count=1, depth_image_dim=32*32):
     dat = msgpack.unpackb(payload)
 
@@ -51,8 +58,9 @@ def unpack(payload, depth_image_count=1, depth_image_dim=32*32):
     observation = {"image": image, "depth": depth}
     rotation = dat['rotation']
     movement = dat['movement']
+    scene_num = dat['scene_num']
 
-    return reward, observation, rotation, movement
+    return reward, observation, rotation, movement, scene_num
 
 
 def unpack_reset(payload):
@@ -76,6 +84,7 @@ feature_output_dim = (depth_image_dim * depth_image_count) + (image_feature_dim 
 
 class Root(object):
     def __init__(self, sess, logdir, num_workers):
+        self.latest_stage = -1
         self.sess = sess
         with sess.as_default():
             model = make_network()
@@ -149,7 +158,8 @@ class Root(object):
         self.popped_locks[identifier].acquire()
         with self.sess.as_default():
             body = cherrypy.request.body.read()
-            reward, observation, rotation, movement = unpack(body)
+            reward, observation, rotation, movement, scene_num = unpack(body)
+            self.latest_stage = max(scene_num, self.latest_stage)
 
             inbound_logger.info('id: {}, reward: {}, depth: {}'.format(
                 identifier, reward, observation['depth']
@@ -168,7 +178,8 @@ class Root(object):
             self.popped_locks[identifier].acquire()
         with self.sess.as_default():
             body = cherrypy.request.body.read()
-            reward, observation, rotation, movement = unpack(body)
+            reward, observation, rotation, movement, scene_num = unpack(body)
+            self.latest_stage = max(scene_num, self.latest_stage)
 
             inbound_logger.info('id: {}, reward: {}, depth: {}'.format(
                 identifier, reward, observation['depth']
@@ -181,7 +192,7 @@ class Root(object):
             ))
         if identifier in self.popped_locks:
             self.popped_locks[identifier].release()
-        return str(result)
+        return str(result) + "/" + str(self.latest_stage)
 
     @cherrypy.expose
     def reset(self, identifier):
@@ -207,7 +218,23 @@ def main(args):
     sess = tf.Session(config=config)
     cherrypy.config.update({'server.socket_host': args.host, 'server.socket_port': args.port, 'log.screen': False,
                             'log.access_file': CHERRYPY_ACCESS_LOG, 'log.error_file': CHERRYPY_ERROR_LOG})
-    cherrypy.quickstart(Root(sess, args.logdir, args.workers))
+
+    # Cherrypy Original
+    # cherrypy.quickstart(Root(sess, args.logdir, args.workers))
+
+    # GEvent
+    # app = cherrypy.tree.mount(Root(sess, args.logdir, args.workers), '/')
+    # wsgi.WSGIServer((args.host, args.port), app).serve_forever()
+
+    # wsgiserver
+    # app = cherrypy.tree.mount(Root(sess, args.logdir, args.workers), '/')
+    # server = wsgiserver.WSGIServer(app, host=args.host, port=args.port)
+    # server.start()
+
+    # wsgiref
+    app = cherrypy.tree.mount(Root(sess, args.logdir, args.workers), '/')
+    server = make_server(args.host, args.port, app, ThreadingWsgiServer)
+    server.serve_forever()
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='LIS Backend')
